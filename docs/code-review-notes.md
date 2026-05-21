@@ -27,6 +27,20 @@ Review date: 2026-05-21
 - Added a GUI persistence smoke test.
 - Made GUI action status messages visible through the main-window status bar.
 
+## GUI Aesthetic Refresh
+
+- Normalized card, input, button, and pill styling.
+- Polished sidebar and window chrome.
+- Improved table density and selected-row styling.
+- Reworked Resident Desk spacing and profile scrolling.
+- Balanced dashboard, meal desk, student portal, and login layouts.
+
+Remaining design debt:
+
+- `src/gui_main.cpp` should still be split into focused UI modules.
+- Real icon assets would improve the Dormora brand mark and window controls.
+- More GUI behavior tests should cover permission and form flows.
+
 ## Needs Change
 
 1. Split `src/gui_main.cpp`.
