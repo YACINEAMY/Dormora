@@ -49,3 +49,5 @@ target_compile_options(udrms_gui PRIVATE
 enable_testing()
 add_test(NAME backend_tests COMMAND udrms_tests)
 add_test(NAME gui_smoke_test COMMAND udrms_gui --smoke-test)
+add_test(NAME gui_persistence_test COMMAND udrms_gui --persistence-self-test)
+set_tests_properties(gui_persistence_test PROPERTIES TIMEOUT 5)

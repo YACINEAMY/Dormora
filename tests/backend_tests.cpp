@@ -235,6 +235,32 @@ static void verifyPersistenceComponent()
     require(throwsDomainError([&] {
         University::fromJson(inconsistent);
     }), "university rejects inconsistent persisted assignments");
+
+    QJsonObject partialStudentAssignment{
+        {"id", "S9"},
+        {"fullName", "Incomplete Assignment"},
+        {"academicYear", 1},
+        {"dormitoryId", "D1"},
+    };
+    require(throwsDomainError([&] {
+        Student::fromJson(partialStudentAssignment);
+    }), "student JSON rejects partial assignment fields");
+
+    QJsonObject missingRoomStudentsArray{
+        {"number", 12},
+        {"capacity", 1},
+    };
+    require(throwsDomainError([&] {
+        Room::fromJson(missingRoomStudentsArray);
+    }), "room JSON requires students array");
+
+    QJsonObject missingRestaurantMealsArray{
+        {"name", "North Restaurant"},
+        {"menus", QJsonArray{}},
+    };
+    require(throwsDomainError([&] {
+        Restaurant::fromJson(missingRestaurantMealsArray);
+    }), "restaurant JSON requires meals-served array");
 }
 
 int main(int argc, char *argv[])

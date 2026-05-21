@@ -4,6 +4,28 @@
 
 namespace udrms {
 
+namespace {
+
+QString requiredString(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isString()) {
+        throw DomainError(QString("Student JSON field '%1' must be a string.").arg(field));
+    }
+    return value.toString();
+}
+
+int requiredInt(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isDouble()) {
+        throw DomainError(QString("Student JSON field '%1' must be a number.").arg(field));
+    }
+    return value.toInt();
+}
+
+} // namespace
+
 Student::Student(QString id, QString fullName, int academicYear)
     : Person(std::move(id), std::move(fullName))
     , m_academicYear(academicYear)
@@ -75,12 +97,17 @@ QJsonObject Student::toJson() const
 Student Student::fromJson(const QJsonObject &object)
 {
     Student student(
-        object.value("id").toString(),
-        object.value("fullName").toString(),
-        object.value("academicYear").toInt());
+        requiredString(object, "id"),
+        requiredString(object, "fullName"),
+        requiredInt(object, "academicYear"));
 
-    if (object.contains("dormitoryId") && object.contains("roomNumber")) {
-        student.assignToRoom(object.value("dormitoryId").toString(), object.value("roomNumber").toInt());
+    const bool hasDormitoryId = object.contains("dormitoryId");
+    const bool hasRoomNumber = object.contains("roomNumber");
+    if (hasDormitoryId != hasRoomNumber) {
+        throw DomainError("Student JSON assignment must include both dormitoryId and roomNumber.");
+    }
+    if (hasDormitoryId) {
+        student.assignToRoom(requiredString(object, "dormitoryId"), requiredInt(object, "roomNumber"));
     }
 
     return student;

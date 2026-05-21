@@ -8,6 +8,28 @@
 
 namespace udrms {
 
+namespace {
+
+int requiredInt(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isDouble()) {
+        throw DomainError(QString("Room JSON field '%1' must be a number.").arg(field));
+    }
+    return value.toInt();
+}
+
+QJsonArray requiredArray(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isArray()) {
+        throw DomainError(QString("Room JSON field '%1' must be an array.").arg(field));
+    }
+    return value.toArray();
+}
+
+} // namespace
+
 Room::Room(int number, int capacity)
     : m_number(number)
     , m_capacity(capacity)
@@ -94,9 +116,12 @@ QJsonObject Room::toJson() const
 
 Room Room::fromJson(const QJsonObject &object)
 {
-    Room room(object.value("number").toInt(), object.value("capacity").toInt());
-    const QJsonArray students = object.value("students").toArray();
+    Room room(requiredInt(object, "number"), requiredInt(object, "capacity"));
+    const QJsonArray students = requiredArray(object, "students");
     for (const QJsonValue &value : students) {
+        if (!value.isString()) {
+            throw DomainError("Room JSON student IDs must be strings.");
+        }
         room.addStudent(value.toString());
     }
     return room;

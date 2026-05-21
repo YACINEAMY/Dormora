@@ -8,6 +8,27 @@
 
 namespace udrms {
 
+namespace {
+
+QJsonArray requiredArray(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isArray()) {
+        throw DomainError(QString("University JSON field '%1' must be an array.").arg(field));
+    }
+    return value.toArray();
+}
+
+QJsonObject requiredObjectEntry(const QJsonValue &value, const QString &context)
+{
+    if (!value.isObject()) {
+        throw DomainError(context + " JSON array entries must be objects.");
+    }
+    return value.toObject();
+}
+
+} // namespace
+
 void University::addStudent(const Student &student)
 {
     if (m_students.contains(student.id())) {
@@ -219,14 +240,14 @@ University University::fromJson(const QJsonObject &object)
 {
     University university;
 
-    const QJsonArray dormitories = object.value("dormitories").toArray();
+    const QJsonArray dormitories = requiredArray(object, "dormitories");
     for (const QJsonValue &value : dormitories) {
-        university.addDormitory(Dormitory::fromJson(value.toObject()));
+        university.addDormitory(Dormitory::fromJson(requiredObjectEntry(value, "Dormitory")));
     }
 
-    const QJsonArray students = object.value("students").toArray();
+    const QJsonArray students = requiredArray(object, "students");
     for (const QJsonValue &value : students) {
-        university.addStudent(Student::fromJson(value.toObject()));
+        university.addStudent(Student::fromJson(requiredObjectEntry(value, "Student")));
     }
 
     university.validateIntegrity();

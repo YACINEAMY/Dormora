@@ -1,4 +1,5 @@
 build/
 sample-university-data.json
+udrms-data.json
 *.user
 *.autosave

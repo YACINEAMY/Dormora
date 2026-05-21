@@ -9,6 +9,54 @@
 
 namespace udrms {
 
+namespace {
+
+QString requiredString(const QJsonObject &object, const char *field, const QString &context)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isString()) {
+        throw DomainError(context + " JSON field '" + field + "' must be a string.");
+    }
+    return value.toString();
+}
+
+int requiredInt(const QJsonObject &object, const char *field, const QString &context)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isDouble()) {
+        throw DomainError(context + " JSON field '" + field + "' must be a number.");
+    }
+    return value.toInt();
+}
+
+QJsonArray requiredArray(const QJsonObject &object, const char *field, const QString &context)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isArray()) {
+        throw DomainError(context + " JSON field '" + field + "' must be an array.");
+    }
+    return value.toArray();
+}
+
+QJsonObject requiredObject(const QJsonValue &value, const QString &context)
+{
+    if (!value.isObject()) {
+        throw DomainError(context + " JSON array entries must be objects.");
+    }
+    return value.toObject();
+}
+
+QDate requiredIsoDate(const QJsonObject &object, const char *field, const QString &context)
+{
+    const QDate date = QDate::fromString(requiredString(object, field, context), Qt::ISODate);
+    if (!date.isValid()) {
+        throw DomainError(context + " JSON field '" + field + "' must be an ISO date.");
+    }
+    return date;
+}
+
+} // namespace
+
 QJsonObject DailyMenu::toJson() const
 {
     return {
@@ -21,9 +69,9 @@ QJsonObject DailyMenu::toJson() const
 DailyMenu DailyMenu::fromJson(const QJsonObject &object)
 {
     return {
-        object.value("breakfast").toString(),
-        object.value("lunch").toString(),
-        object.value("dinner").toString(),
+        requiredString(object, "breakfast", "Menu"),
+        requiredString(object, "lunch", "Menu"),
+        requiredString(object, "dinner", "Menu"),
     };
 }
 
@@ -113,21 +161,21 @@ QJsonObject Restaurant::toJson() const
 
 Restaurant Restaurant::fromJson(const QJsonObject &object)
 {
-    Restaurant restaurant(object.value("name").toString());
+    Restaurant restaurant(requiredString(object, "name", "Restaurant"));
 
-    const QJsonArray menus = object.value("menus").toArray();
+    const QJsonArray menus = requiredArray(object, "menus", "Restaurant");
     for (const QJsonValue &value : menus) {
-        const QJsonObject menuObject = value.toObject();
-        const QDate date = QDate::fromString(menuObject.value("date").toString(), Qt::ISODate);
+        const QJsonObject menuObject = requiredObject(value, "Restaurant menu");
+        const QDate date = requiredIsoDate(menuObject, "date", "Restaurant menu");
         restaurant.setMenu(date, DailyMenu::fromJson(menuObject));
     }
 
-    const QJsonArray mealsServed = object.value("mealsServed").toArray();
+    const QJsonArray mealsServed = requiredArray(object, "mealsServed", "Restaurant");
     for (const QJsonValue &value : mealsServed) {
-        const QJsonObject mealObject = value.toObject();
+        const QJsonObject mealObject = requiredObject(value, "Restaurant meal count");
         restaurant.recordMealServed(
-            QDate::fromString(mealObject.value("date").toString(), Qt::ISODate),
-            mealObject.value("count").toInt());
+            requiredIsoDate(mealObject, "date", "Restaurant meal count"),
+            requiredInt(mealObject, "count", "Restaurant meal count"));
     }
 
     return restaurant;

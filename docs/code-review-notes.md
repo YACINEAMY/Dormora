@@ -22,28 +22,23 @@ Review date: 2026-05-21
 - Added public API comments to the backend headers so future readers can understand ownership and invariants quickly.
 - Tightened `Restaurant::setMenu()` so a saved menu must include breakfast, lunch, and dinner.
 - Added a backend test that catches incomplete menu data.
+- Added strict JSON field/type checks in backend loaders.
+- Added GUI app-state persistence for university data, neighborhoods, admin profiles, and the student portal password.
+- Added a GUI persistence smoke test.
+- Made GUI action status messages visible through the main-window status bar.
 
 ## Needs Change
 
 1. Split `src/gui_main.cpp`.
-   The file is over 2,000 lines and mixes styling, authentication, seeded data, layout building, permissions, and actions. Move it into smaller files such as `DormitoryWindow`, `SeedData`, `AdminPages`, `StudentPages`, and `UiHelpers`.
+   The file is still over 2,000 lines and mixes styling, authentication, seeded data, layout building, permissions, and actions. Move it into smaller files such as `DormitoryWindow`, `SeedData`, `AdminPages`, `StudentPages`, and `UiHelpers`.
 
-2. Add real persistence to the GUI.
-   The GUI currently seeds data in memory on every start. User edits disappear when the app closes. Connect startup/shutdown or explicit Save/Load actions to `JsonStorage`.
+2. Replace demo authentication before production use.
+   Credentials are now persisted in the app-state file and no longer exposed in the login error message, but first-run defaults still exist for the class demo. A real deployment should hash passwords and use per-user student credentials.
 
-3. Validate JSON field types more strictly.
-   The `fromJson()` methods rely heavily on Qt defaults such as empty strings and zero values. Invalid data often fails later, but the error messages are indirect. Add helpers that require fields and expected JSON types.
+3. Add broader GUI-focused tests.
+   The backend is tested, and persistence now has a smoke test, but permission rules, login routing, neighborhood access, and GUI actions still need direct automated coverage.
 
-4. Replace hard-coded credentials before real use.
-   `admin/admin123`, scoped admin passwords, and `student123` are embedded in `gui_main.cpp`. That is acceptable for a demo, but not for production or a submitted app that claims real authentication.
-
-5. Improve GUI status feedback.
-   `showStatus()` only stores the message in the window tooltip. Either wire a visible `QStatusBar`/label or remove the method and show feedback consistently near the active form.
-
-6. Add GUI-focused tests.
-   The backend is tested, but permission rules, login routing, neighborhood access, and GUI actions have only smoke-test coverage.
-
-7. Avoid checked-in build artifacts.
+4. Avoid checked-in build artifacts.
    The `build` folder contains generated binaries, DLLs, screenshots, and CMake files. Keep source, docs, and sample data in the project; regenerate build outputs locally.
 
 ## Optimization Opportunities

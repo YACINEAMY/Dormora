@@ -4,7 +4,11 @@
 #include <QApplication>
 #include <QButtonGroup>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDateEdit>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QFrame>
 #include <QFont>
 #include <QGraphicsOpacityEffect>
@@ -16,8 +20,12 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QMouseEvent>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QPropertyAnimation>
 #include <QPushButton>
+#include <QSaveFile>
 #include <QScreen>
 #include <QScrollArea>
 #include <QSet>
@@ -26,6 +34,7 @@
 #include <QStatusBar>
 #include <QTableWidget>
 #include <QTimer>
+#include <QTemporaryDir>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -310,13 +319,111 @@ struct AdminProfile {
     QSet<QString> neighborhoodIds;
 };
 
+QString defaultAppStatePath()
+{
+    return QDir(QCoreApplication::applicationDirPath()).filePath("udrms-data.json");
+}
+
+QJsonArray stringListToJson(const QVector<QString> &values)
+{
+    QJsonArray array;
+    for (const QString &value : values) {
+        array.append(value);
+    }
+    return array;
+}
+
+QJsonArray stringSetToJson(const QSet<QString> &values)
+{
+    QVector<QString> sorted(values.cbegin(), values.cend());
+    std::sort(sorted.begin(), sorted.end());
+    return stringListToJson(sorted);
+}
+
+QVector<QString> stringArrayFromJson(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isArray()) {
+        throw DomainError(QString("App state field '%1' must be an array.").arg(field));
+    }
+
+    QVector<QString> result;
+    for (const QJsonValue &entry : value.toArray()) {
+        if (!entry.isString()) {
+            throw DomainError(QString("App state field '%1' must contain only strings.").arg(field));
+        }
+        result.append(entry.toString());
+    }
+    return result;
+}
+
+QString requiredAppString(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isString()) {
+        throw DomainError(QString("App state field '%1' must be a string.").arg(field));
+    }
+    return value.toString();
+}
+
+bool requiredAppBool(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isBool()) {
+        throw DomainError(QString("App state field '%1' must be a boolean.").arg(field));
+    }
+    return value.toBool();
+}
+
+QJsonObject neighborhoodToJson(const Neighborhood &neighborhood)
+{
+    return {
+        {"id", neighborhood.id},
+        {"name", neighborhood.name},
+        {"dormitoryIds", stringListToJson(neighborhood.dormitoryIds)},
+    };
+}
+
+Neighborhood neighborhoodFromJson(const QJsonObject &object)
+{
+    return {
+        requiredAppString(object, "id"),
+        requiredAppString(object, "name"),
+        stringArrayFromJson(object, "dormitoryIds"),
+    };
+}
+
+QJsonObject adminProfileToJson(const AdminProfile &profile)
+{
+    return {
+        {"username", profile.username},
+        {"password", profile.password},
+        {"displayName", profile.displayName},
+        {"fullAccess", profile.fullAccess},
+        {"neighborhoodIds", stringSetToJson(profile.neighborhoodIds)},
+    };
+}
+
+AdminProfile adminProfileFromJson(const QJsonObject &object)
+{
+    const QVector<QString> neighborhoodIds = stringArrayFromJson(object, "neighborhoodIds");
+    return {
+        requiredAppString(object, "username"),
+        requiredAppString(object, "password"),
+        requiredAppString(object, "displayName"),
+        requiredAppBool(object, "fullAccess"),
+        QSet<QString>(neighborhoodIds.cbegin(), neighborhoodIds.cend()),
+    };
+}
+
 } // namespace
 
 class DormitoryWindow final : public QMainWindow {
 public:
-    DormitoryWindow()
+    explicit DormitoryWindow(QString dataFilePath = {})
+        : m_dataFilePath(dataFilePath.isEmpty() ? defaultAppStatePath() : std::move(dataFilePath))
     {
-        seedData();
+        loadOrSeedData();
         setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
         setAttribute(Qt::WA_TranslucentBackground);
         m_enableAnimations = !QCoreApplication::arguments().contains("--screenshot");
@@ -363,6 +470,8 @@ private:
     QVector<Neighborhood> m_neighborhoods;
     QHash<QString, AdminProfile> m_adminProfiles;
     AuthRole m_role = AuthRole::None;
+    QString m_dataFilePath;
+    QString m_studentPortalPassword = "student123";
     QString m_currentAdminUsername;
     QString m_currentStudentId;
     QPoint m_dragPosition;
@@ -414,8 +523,24 @@ private:
     QComboBox *m_neighborhoodAccessInput = nullptr;
     QString m_selectedStudentId;
 
+    void loadOrSeedData()
+    {
+        if (QFile::exists(m_dataFilePath)) {
+            loadAppState();
+            return;
+        }
+
+        seedData();
+        saveAppState();
+    }
+
     void seedData()
     {
+        m_university = University();
+        m_neighborhoods.clear();
+        m_adminProfiles.clear();
+        m_studentPortalPassword = "student123";
+
         Dormitory north("D1", "North Dormitory", 6, Restaurant("North Restaurant"));
         north.addRoom(Room(101, 2));
         north.addRoom(Room(102, 2));
@@ -448,6 +573,111 @@ private:
         m_adminProfiles.insert("admin", {"admin", "admin123", "Global Administrator", true, {}});
         m_adminProfiles.insert("northadmin", {"northadmin", "north123", "North Neighborhood Admin", false, {"NORTH"}});
         m_adminProfiles.insert("southadmin", {"southadmin", "south123", "South Neighborhood Admin", false, {"SOUTH"}});
+    }
+
+    QJsonObject appStateToJson() const
+    {
+        QJsonArray neighborhoods;
+        for (const Neighborhood &neighborhood : m_neighborhoods) {
+            neighborhoods.append(neighborhoodToJson(neighborhood));
+        }
+
+        QJsonArray adminProfiles;
+        QVector<QString> usernames(m_adminProfiles.keyBegin(), m_adminProfiles.keyEnd());
+        std::sort(usernames.begin(), usernames.end());
+        for (const QString &username : usernames) {
+            adminProfiles.append(adminProfileToJson(m_adminProfiles.value(username)));
+        }
+
+        return {
+            {"university", m_university.toJson()},
+            {"neighborhoods", neighborhoods},
+            {"adminProfiles", adminProfiles},
+            {"studentPortalPassword", m_studentPortalPassword},
+        };
+    }
+
+    void loadAppState()
+    {
+        QFile file(m_dataFilePath);
+        if (!file.open(QIODevice::ReadOnly)) {
+            throw DomainError("Could not open app data file: " + file.errorString());
+        }
+
+        QJsonParseError parseError;
+        const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &parseError);
+        if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+            throw DomainError("App data file is not valid JSON: " + parseError.errorString());
+        }
+
+        const QJsonObject root = document.object();
+        const QJsonValue universityValue = root.value("university");
+        if (!universityValue.isObject()) {
+            throw DomainError("App state field 'university' must be an object.");
+        }
+
+        const QJsonValue neighborhoodsValue = root.value("neighborhoods");
+        if (!neighborhoodsValue.isArray()) {
+            throw DomainError("App state field 'neighborhoods' must be an array.");
+        }
+
+        const QJsonValue adminProfilesValue = root.value("adminProfiles");
+        if (!adminProfilesValue.isArray()) {
+            throw DomainError("App state field 'adminProfiles' must be an array.");
+        }
+
+        University loadedUniversity = University::fromJson(universityValue.toObject());
+        QVector<Neighborhood> loadedNeighborhoods;
+        for (const QJsonValue &value : neighborhoodsValue.toArray()) {
+            if (!value.isObject()) {
+                throw DomainError("App state neighborhoods entries must be objects.");
+            }
+            loadedNeighborhoods.append(neighborhoodFromJson(value.toObject()));
+        }
+
+        QHash<QString, AdminProfile> loadedProfiles;
+        for (const QJsonValue &value : adminProfilesValue.toArray()) {
+            if (!value.isObject()) {
+                throw DomainError("App state admin profile entries must be objects.");
+            }
+            const AdminProfile profile = adminProfileFromJson(value.toObject());
+            loadedProfiles.insert(profile.username.toLower(), profile);
+        }
+        if (loadedProfiles.isEmpty()) {
+            throw DomainError("App state must contain at least one admin profile.");
+        }
+
+        const QString loadedStudentPassword = requiredAppString(root, "studentPortalPassword");
+        if (loadedStudentPassword.isEmpty()) {
+            throw DomainError("Student portal password cannot be empty.");
+        }
+
+        m_university = loadedUniversity;
+        m_neighborhoods = loadedNeighborhoods;
+        m_adminProfiles = loadedProfiles;
+        m_studentPortalPassword = loadedStudentPassword;
+    }
+
+    void saveAppState() const
+    {
+        const QFileInfo target(m_dataFilePath);
+        const QDir parentDir = target.dir();
+        if (!parentDir.exists() && !QDir().mkpath(parentDir.absolutePath())) {
+            throw DomainError("Could not create app data directory.");
+        }
+
+        QSaveFile file(m_dataFilePath);
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+            throw DomainError("Could not open app data file for writing: " + file.errorString());
+        }
+
+        const QByteArray data = QJsonDocument(appStateToJson()).toJson(QJsonDocument::Indented);
+        if (file.write(data) != data.size()) {
+            throw DomainError("Could not write app data file: " + file.errorString());
+        }
+        if (!file.commit()) {
+            throw DomainError("Could not commit app data file: " + file.errorString());
+        }
     }
 
     void buildLoginUi()
@@ -607,7 +837,7 @@ private:
         }
 
         const QString studentId = user.toUpper();
-        if (m_university.hasStudent(studentId) && password == "student123") {
+        if (m_university.hasStudent(studentId) && password == m_studentPortalPassword) {
             m_role = AuthRole::Student;
             m_currentStudentId = studentId;
             buildStudentPortalUi();
@@ -615,7 +845,7 @@ private:
             return;
         }
 
-        m_loginFeedback->setText("Credentials not recognized. Try admin/admin123 or S1001/student123.");
+        m_loginFeedback->setText("Credentials not recognized. Check the username or password.");
     }
 
 public:
@@ -643,6 +873,17 @@ public:
         if (m_stack != nullptr && index >= 0 && index < m_stack->count()) {
             m_stack->setCurrentIndex(index);
         }
+    }
+
+    void addPersistenceProbeForTest()
+    {
+        m_university.addStudent(Student("S9999", "Persistence Probe", 1));
+        saveAppState();
+    }
+
+    bool hasStudentForTest(const QString &studentId) const
+    {
+        return m_university.hasStudent(studentId);
     }
 
 private:
@@ -1573,10 +1814,14 @@ private:
             }
 
             Neighborhood copy{id, name, {}};
+            QVector<Dormitory> newDormitories;
             int dormIndex = 1;
             for (const QString &sourceDormitoryId : source->dormitoryIds) {
                 const Dormitory &sourceDormitory = m_university.dormitory(sourceDormitoryId);
                 const QString newDormitoryId = id + "-D" + QString::number(dormIndex);
+                if (m_university.hasDormitory(newDormitoryId)) {
+                    throw DomainError("Copied dormitory ID already exists.");
+                }
                 Dormitory newDormitory(
                     newDormitoryId,
                     name + " Residence " + QString::number(dormIndex),
@@ -1585,11 +1830,14 @@ private:
                 for (const Room &room : sourceDormitory.rooms()) {
                     newDormitory.addRoom(Room(room.number(), room.capacity()));
                 }
-                m_university.addDormitory(newDormitory);
+                newDormitories.append(newDormitory);
                 copy.dormitoryIds.append(newDormitoryId);
                 ++dormIndex;
             }
 
+            for (const Dormitory &newDormitory : newDormitories) {
+                m_university.addDormitory(newDormitory);
+            }
             m_neighborhoods.append(copy);
             m_adminProfiles[m_currentAdminUsername].neighborhoodIds.insert(id);
             m_neighborhoodIdInput->clear();
@@ -1643,6 +1891,7 @@ private:
     {
         try {
             action();
+            saveAppState();
             refreshAll();
         } catch (const DomainError &error) {
             setStudentPanelMessage(error.what(), true);
@@ -2101,6 +2350,7 @@ private:
     {
         if (!message.isEmpty()) {
             setToolTip(message);
+            statusBar()->showMessage(message, 5000);
         }
     }
 
@@ -2141,7 +2391,24 @@ private:
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    DormitoryWindow window;
+    const int dataFileIndex = QCoreApplication::arguments().indexOf("--data-file");
+    const QString dataFilePath = dataFileIndex >= 0
+        ? QCoreApplication::arguments().value(dataFileIndex + 1)
+        : QString();
+
+    if (QCoreApplication::arguments().contains("--persistence-self-test")) {
+        QTemporaryDir tempDir;
+        if (!tempDir.isValid()) {
+            return 1;
+        }
+        const QString testDataPath = QDir(tempDir.path()).filePath("udrms-data.json");
+        DormitoryWindow first(testDataPath);
+        first.addPersistenceProbeForTest();
+        DormitoryWindow second(testDataPath);
+        return second.hasStudentForTest("S9999") ? 0 : 1;
+    }
+
+    DormitoryWindow window(dataFilePath);
     const int adminLoginIndex = QCoreApplication::arguments().indexOf("--login-admin");
     if (adminLoginIndex >= 0) {
         window.loginAsAdminForTest(QCoreApplication::arguments().value(adminLoginIndex + 1, "admin"));

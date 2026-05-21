@@ -8,6 +8,46 @@
 
 namespace udrms {
 
+namespace {
+
+QString requiredString(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isString()) {
+        throw DomainError(QString("Dormitory JSON field '%1' must be a string.").arg(field));
+    }
+    return value.toString();
+}
+
+int requiredInt(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isDouble()) {
+        throw DomainError(QString("Dormitory JSON field '%1' must be a number.").arg(field));
+    }
+    return value.toInt();
+}
+
+QJsonArray requiredArray(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isArray()) {
+        throw DomainError(QString("Dormitory JSON field '%1' must be an array.").arg(field));
+    }
+    return value.toArray();
+}
+
+QJsonObject requiredObject(const QJsonObject &object, const char *field)
+{
+    const QJsonValue value = object.value(field);
+    if (!value.isObject()) {
+        throw DomainError(QString("Dormitory JSON field '%1' must be an object.").arg(field));
+    }
+    return value.toObject();
+}
+
+} // namespace
+
 Dormitory::Dormitory(QString id, QString name, int capacity, Restaurant restaurant)
     : m_id(std::move(id))
     , m_name(std::move(name))
@@ -181,13 +221,16 @@ QJsonObject Dormitory::toJson() const
 Dormitory Dormitory::fromJson(const QJsonObject &object)
 {
     Dormitory dormitory(
-        object.value("id").toString(),
-        object.value("name").toString(),
-        object.value("capacity").toInt(),
-        Restaurant::fromJson(object.value("restaurant").toObject()));
+        requiredString(object, "id"),
+        requiredString(object, "name"),
+        requiredInt(object, "capacity"),
+        Restaurant::fromJson(requiredObject(object, "restaurant")));
 
-    const QJsonArray rooms = object.value("rooms").toArray();
+    const QJsonArray rooms = requiredArray(object, "rooms");
     for (const QJsonValue &value : rooms) {
+        if (!value.isObject()) {
+            throw DomainError("Dormitory JSON rooms entries must be objects.");
+        }
         dormitory.addRoom(Room::fromJson(value.toObject()));
     }
 
