@@ -291,11 +291,11 @@ QScrollArea > QWidget > QWidget {
 }
 QScrollBar:vertical {
     background: transparent;
-    width: 10px;
+    width: 8px;
 }
 QScrollBar::handle:vertical {
-    background: #C7D8CF;
-    border-radius: 5px;
+    background: #D2E0D8;
+    border-radius: 4px;
     min-height: 32px;
 }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
@@ -307,6 +307,13 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
 QStatusBar {
     background: #F7FAF8;
     color: #123D32;
+}
+QLabel#appStatus {
+    background: #EEF6F1;
+    border-top: 1px solid #D9E5DF;
+    color: #315B4B;
+    font-size: 12px;
+    padding: 1px 18px;
 }
 )";
 
@@ -477,6 +484,8 @@ public:
         m_enableAnimations = !QCoreApplication::arguments().contains("--screenshot");
         qApp->setFont(QFont("Segoe UI", 10));
         qApp->setStyleSheet(kAppStyle);
+        statusBar()->setSizeGripEnabled(false);
+        statusBar()->hide();
         buildLoginUi();
         setWindowTitle("Dormora");
         resize(1280, 780);
@@ -530,6 +539,7 @@ private:
     QLineEdit *m_loginUserInput = nullptr;
     QLineEdit *m_loginPasswordInput = nullptr;
     QLabel *m_loginFeedback = nullptr;
+    QLabel *m_statusLabel = nullptr;
 
     QLabel *m_residentsMetric = nullptr;
     QLabel *m_availableRoomsMetric = nullptr;
@@ -849,6 +859,12 @@ private:
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
         layout->addWidget(content);
+        m_statusLabel = new QLabel(chrome);
+        m_statusLabel->setObjectName("appStatus");
+        m_statusLabel->setVisible(false);
+        m_statusLabel->setMinimumHeight(16);
+        m_statusLabel->setMaximumHeight(16);
+        layout->addWidget(m_statusLabel);
         setCentralWidget(chrome);
 
         if (!m_enableAnimations) {
@@ -1158,8 +1174,8 @@ private:
 
         auto *preview = card(page);
         auto *previewLayout = new QVBoxLayout(preview);
-        previewLayout->setContentsMargins(20, 18, 20, 20);
-        previewLayout->setSpacing(14);
+        previewLayout->setContentsMargins(20, 16, 20, 16);
+        previewLayout->setSpacing(10);
         previewLayout->addWidget(classLabel("Daily Menu Cards", "cardTitle"));
         auto *scroll = new QScrollArea(preview);
         scroll->setWidgetResizable(true);
@@ -1167,7 +1183,7 @@ private:
         auto *content = new QWidget(scroll);
         m_menuCards = new QVBoxLayout(content);
         m_menuCards->setContentsMargins(0, 0, 0, 0);
-        m_menuCards->setSpacing(12);
+        m_menuCards->setSpacing(10);
         scroll->setWidget(content);
         previewLayout->addWidget(scroll);
         split->addWidget(preview, 2);
@@ -1207,8 +1223,8 @@ private:
     {
         auto *box = card(this);
         auto *layout = new QVBoxLayout(box);
-        layout->setContentsMargins(20, 18, 20, 20);
-        layout->setSpacing(10);
+        layout->setContentsMargins(18, 14, 18, 14);
+        layout->setSpacing(8);
         layout->addWidget(classLabel("Add / Copy Neighborhood", "cardTitle"));
 
         m_neighborhoodIdInput = new QLineEdit(box);
@@ -1266,8 +1282,8 @@ private:
         auto *page = new QWidget(this);
         page->setObjectName(studentTone ? "studentContentPane" : "contentPane");
         auto *layout = new QVBoxLayout(page);
-        layout->setContentsMargins(30, 28, 30, 28);
-        layout->setSpacing(18);
+        layout->setContentsMargins(30, 24, 30, 24);
+        layout->setSpacing(14);
         auto *titleRow = new QHBoxLayout();
         titleRow->setSpacing(12);
         titleRow->addWidget(label(title, "pageTitle", page), 1);
@@ -1305,8 +1321,8 @@ private:
     {
         auto *box = card(this);
         auto *layout = new QVBoxLayout(box);
-        layout->setContentsMargins(20, 18, 20, 20);
-        layout->setSpacing(14);
+        layout->setContentsMargins(18, 14, 18, 14);
+        layout->setSpacing(8);
         auto *top = new QHBoxLayout();
         top->addWidget(classLabel("Dormitory Room Matrix", "cardTitle"));
         top->addStretch();
@@ -1315,6 +1331,7 @@ private:
 
         m_roomMatrix = new QTableWidget(box);
         setupTable(m_roomMatrix, {"Dormitory", "Room", "Capacity", "Residents", "State"});
+        applyColumnWeights(m_roomMatrix, {160, 60, 75, 125, 75});
         layout->addWidget(m_roomMatrix, 1);
         return box;
     }
@@ -1352,7 +1369,7 @@ private:
 
         m_studentSearchInput = new QLineEdit(box);
         m_studentSearchInput->setPlaceholderText("Search by name or student ID");
-        m_studentSearchInput->setMinimumHeight(42);
+        m_studentSearchInput->setMinimumHeight(38);
         layout->addWidget(m_studentSearchInput);
 
         auto *filterRow = new QHBoxLayout();
@@ -1368,14 +1385,15 @@ private:
 
         m_studentTable = new QTableWidget(box);
         setupTable(m_studentTable, {"ID", "Full Name", "Year", "Assignment"});
-        m_studentTable->setMinimumHeight(160);
+        applyColumnWeights(m_studentTable, {72, 165, 55, 145});
+        m_studentTable->setMinimumHeight(170);
         layout->addWidget(m_studentTable, 1);
 
         auto *addBox = new QFrame(box);
         addBox->setObjectName("studentInlinePanel");
         auto *addLayout = new QVBoxLayout(addBox);
-        addLayout->setContentsMargins(14, 12, 14, 14);
-        addLayout->setSpacing(8);
+        addLayout->setContentsMargins(12, 10, 12, 10);
+        addLayout->setSpacing(6);
         addLayout->addWidget(classLabel("Add Student", "cardTitle"));
         m_studentIdInput = new QLineEdit(addBox);
         m_studentIdInput->setPlaceholderText("S1005");
@@ -1413,8 +1431,8 @@ private:
         auto *box = card(this);
         box->setMinimumWidth(420);
         auto *layout = new QVBoxLayout(box);
-        layout->setContentsMargins(20, 18, 20, 20);
-        layout->setSpacing(10);
+        layout->setContentsMargins(18, 14, 18, 14);
+        layout->setSpacing(8);
 
         layout->addWidget(classLabel("Student Profile", "cardTitle"));
         auto *scroll = new QScrollArea(box);
@@ -1422,8 +1440,8 @@ private:
         scroll->setFrameShape(QFrame::NoFrame);
         auto *content = new QWidget(scroll);
         auto *profileLayout = new QVBoxLayout(content);
-        profileLayout->setContentsMargins(0, 0, 6, 0);
-        profileLayout->setSpacing(9);
+        profileLayout->setContentsMargins(0, 0, 4, 0);
+        profileLayout->setSpacing(6);
 
         m_profileNameLabel = classLabel("No student selected", "cardTitle");
         m_profileMetaLabel = classLabel("Search for a student by name or ID.", "muted");
@@ -1438,14 +1456,16 @@ private:
 
         m_profileNameInput = new QLineEdit(box);
         m_profileNameInput->setPlaceholderText("Full name");
+        m_profileNameInput->setFixedHeight(36);
         m_profileYearInput = new QSpinBox(box);
         m_profileYearInput->setRange(1, 8);
+        m_profileYearInput->setFixedHeight(36);
         profileLayout->addWidget(fieldLabel("Modify Full Name", m_profileNameInput));
         profileLayout->addWidget(fieldLabel("Modify Academic Year", m_profileYearInput));
 
         auto *save = new QPushButton("Save changes", box);
         save->setProperty("class", "primary");
-        save->setMinimumHeight(40);
+        save->setMinimumHeight(36);
         connect(save, &QPushButton::clicked, this, [this] { saveSelectedStudent(); });
         profileLayout->addWidget(save);
 
@@ -1455,6 +1475,9 @@ private:
         auto *duplicate = new QPushButton("Duplicate", box);
         auto *deleteButton = new QPushButton("Delete", box);
         deleteButton->setProperty("class", "danger");
+        reset->setFixedHeight(34);
+        duplicate->setFixedHeight(34);
+        deleteButton->setFixedHeight(34);
         utilityRow->addWidget(reset);
         utilityRow->addWidget(duplicate);
         utilityRow->addWidget(deleteButton);
@@ -1463,11 +1486,13 @@ private:
         connect(duplicate, &QPushButton::clicked, this, [this] { duplicateSelectedStudent(); });
         connect(deleteButton, &QPushButton::clicked, this, [this] { deleteSelectedStudent(); });
 
-        profileLayout->addSpacing(8);
+        profileLayout->addSpacing(4);
         profileLayout->addWidget(classLabel("Accommodation Actions", "cardTitle"));
         m_assignDormitoryInput = new QComboBox(box);
+        m_assignDormitoryInput->setFixedHeight(36);
         m_assignRoomInput = new QSpinBox(box);
         m_assignRoomInput->setRange(1, 9999);
+        m_assignRoomInput->setFixedHeight(36);
         profileLayout->addWidget(fieldLabel("Dormitory", m_assignDormitoryInput));
         profileLayout->addWidget(fieldLabel("Room Number", m_assignRoomInput));
 
@@ -1477,6 +1502,8 @@ private:
         assign->setProperty("class", "primary");
         auto *remove = new QPushButton("Remove", box);
         remove->setProperty("class", "danger");
+        assign->setFixedHeight(34);
+        remove->setFixedHeight(34);
         actionRow->addWidget(assign);
         actionRow->addWidget(remove);
         profileLayout->addLayout(actionRow);
@@ -1583,7 +1610,7 @@ private:
         auto *wrap = new QWidget(this);
         auto *layout = new QVBoxLayout(wrap);
         layout->setContentsMargins(0, 0, 0, 0);
-        layout->setSpacing(7);
+        layout->setSpacing(4);
         layout->addWidget(classLabel(name, "muted"));
         layout->addWidget(input);
         return wrap;
@@ -1690,9 +1717,23 @@ private:
         table->setSelectionBehavior(QAbstractItemView::SelectRows);
         table->setSelectionMode(QAbstractItemView::SingleSelection);
         table->setShowGrid(false);
-        table->verticalHeader()->setDefaultSectionSize(42);
+        table->verticalHeader()->setDefaultSectionSize(40);
         table->setFocusPolicy(Qt::NoFocus);
         table->setWordWrap(false);
+        table->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    }
+
+    void applyColumnWeights(QTableWidget *table, const QVector<int> &weights)
+    {
+        if (table == nullptr || weights.size() != table->columnCount()) {
+            return;
+        }
+        auto *header = table->horizontalHeader();
+        for (int i = 0; i < weights.size(); ++i) {
+            header->setSectionResizeMode(i, QHeaderView::Interactive);
+            header->resizeSection(i, weights[i]);
+        }
+        header->setStretchLastSection(true);
     }
 
     void addStudent()
@@ -2098,7 +2139,6 @@ private:
                 setStatusCell(m_roomMatrix, row, 4, full ? "Full" : "Available", full ? "#FDECEC" : "#E6F4EE", full ? "#B42318" : "#1D7A57");
             }
         }
-        m_roomMatrix->resizeColumnsToContents();
     }
 
     void refreshStudents()
@@ -2133,7 +2173,6 @@ private:
         if (m_studentCountLabel != nullptr) {
             m_studentCountLabel->setText(QString::number(visibleCount) + " visible");
         }
-        m_studentTable->resizeColumnsToContents();
         selectStudentRow(m_selectedStudentId);
         if ((m_selectedStudentId.isEmpty() || m_studentTable->selectedItems().isEmpty()) && m_studentTable->rowCount() > 0) {
             m_studentTable->selectRow(0);
@@ -2233,8 +2272,8 @@ private:
         for (const Dormitory &dormitory : visibleDormitories()) {
             auto *item = card(this);
             auto *layout = new QVBoxLayout(item);
-            layout->setContentsMargins(18, 16, 18, 16);
-            layout->setSpacing(12);
+            layout->setContentsMargins(16, 12, 16, 12);
+            layout->setSpacing(9);
             auto *top = new QHBoxLayout();
             top->addWidget(classLabel(dormitory.restaurant().name(), "cardTitle"));
             top->addStretch();
@@ -2398,8 +2437,8 @@ private:
         auto *row = new QFrame(this);
         row->setObjectName("mealRow");
         auto *layout = new QHBoxLayout(row);
-        layout->setContentsMargins(12, 9, 12, 9);
-        layout->setSpacing(10);
+        layout->setContentsMargins(10, 7, 10, 7);
+        layout->setSpacing(9);
         layout->addWidget(statusPill(meal.left(1), "#E6F4EE", "#1D7A57"), 0, Qt::AlignTop);
         auto *textLayout = new QVBoxLayout();
         textLayout->setSpacing(2);
@@ -2429,9 +2468,10 @@ private:
 
     void showStatus(const QString &message)
     {
-        if (!message.isEmpty()) {
-            setToolTip(message);
-            statusBar()->showMessage(message, 5000);
+        setToolTip(message);
+        if (m_statusLabel != nullptr) {
+            m_statusLabel->setText(message);
+            m_statusLabel->setVisible(false);
         }
     }
 
