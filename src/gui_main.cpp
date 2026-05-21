@@ -1,0 +1,2170 @@
+#include "udrms/DomainError.h"
+#include "udrms/University.h"
+
+#include <QApplication>
+#include <QButtonGroup>
+#include <QComboBox>
+#include <QDateEdit>
+#include <QFrame>
+#include <QFont>
+#include <QGraphicsOpacityEffect>
+#include <QGridLayout>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QLabel>
+#include <QLineEdit>
+#include <QMainWindow>
+#include <QMessageBox>
+#include <QMouseEvent>
+#include <QPropertyAnimation>
+#include <QPushButton>
+#include <QScreen>
+#include <QScrollArea>
+#include <QSet>
+#include <QSpinBox>
+#include <QStackedWidget>
+#include <QStatusBar>
+#include <QTableWidget>
+#include <QTimer>
+#include <QVBoxLayout>
+
+#include <algorithm>
+#include <functional>
+
+using namespace udrms;
+
+namespace {
+
+const char *kAppStyle = R"(
+* {
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 13px;
+    color: #13231D;
+}
+QMainWindow {
+    background: transparent;
+}
+QFrame#windowChrome {
+    background: #F7FAF8;
+    border: 1px solid #C9DED3;
+    border-radius: 22px;
+}
+QWidget#appRoot, QWidget#loginRoot {
+    background: #F7FAF8;
+    border-radius: 21px;
+}
+QWidget#studentRoot {
+    background: #FFFCF7;
+    border-radius: 21px;
+}
+QWidget#contentPane {
+    background: #F7FAF8;
+    border-top-right-radius: 21px;
+    border-bottom-right-radius: 21px;
+}
+QWidget#studentContentPane {
+    background: #FFFCF7;
+    border-top-right-radius: 21px;
+    border-bottom-right-radius: 21px;
+}
+QFrame#titleControls {
+    background: transparent;
+    border: none;
+}
+QPushButton#windowButton {
+    background: rgba(15,81,50,0.08);
+    border: none;
+    border-radius: 13px;
+    min-width: 26px;
+    max-width: 26px;
+    min-height: 26px;
+    max-height: 26px;
+    padding: 0;
+    font-weight: 800;
+}
+QPushButton#windowButton:hover {
+    background: rgba(25,135,84,0.18);
+}
+QPushButton#closeButton {
+    background: rgba(180,35,24,0.10);
+    color: #B42318;
+}
+QPushButton#closeButton:hover {
+    background: #B42318;
+    color: white;
+}
+QFrame#sidebar {
+    background: #123D32;
+    border: none;
+    border-top-left-radius: 21px;
+    border-bottom-left-radius: 21px;
+}
+QFrame#studentSidebar {
+    background: #2F5145;
+    border: none;
+    border-top-left-radius: 21px;
+    border-bottom-left-radius: 21px;
+}
+QFrame#loginBrand {
+    background: #123D32;
+    border-top-left-radius: 21px;
+    border-bottom-left-radius: 21px;
+}
+QLabel#brand {
+    color: white;
+    font-size: 24px;
+    font-weight: 800;
+}
+QLabel#brandSub {
+    color: #BFE4D2;
+    font-size: 12px;
+    font-weight: 600;
+}
+QFrame#brandMark {
+    background: #F6C76B;
+    border: 2px solid rgba(255,255,255,0.40);
+    border-radius: 16px;
+    min-width: 42px;
+    max-width: 42px;
+    min-height: 42px;
+    max-height: 42px;
+}
+QLabel#brandMarkLetter {
+    color: #123D32;
+    font-size: 22px;
+    font-weight: 900;
+}
+QFrame#brandMiniLine {
+    background: #123D32;
+    border-radius: 2px;
+    min-height: 4px;
+    max-height: 4px;
+}
+QLabel#loginBadge {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.20);
+    border-radius: 13px;
+    color: #E8FFF3;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 10px;
+}
+QPushButton[nav="true"] {
+    background: transparent;
+    color: #D9F2E4;
+    border: none;
+    border-radius: 10px;
+    padding: 11px 14px;
+    text-align: left;
+    font-weight: 600;
+}
+QPushButton[nav="true"]:checked {
+    background: #1D7A57;
+    color: white;
+}
+QPushButton[nav="true"]:hover {
+    background: rgba(255,255,255,0.10);
+}
+QLabel#pageTitle {
+    font-size: 28px;
+    font-weight: 800;
+}
+QLabel#pageKicker {
+    color: #667085;
+    font-size: 14px;
+}
+QFrame.card, QFrame[class="card"], QGroupBox {
+    background: white;
+    border: 1px solid #D6E3DC;
+    border-radius: 8px;
+}
+QFrame#studentCard {
+    background: #FFFFFF;
+    border: 1px solid #E8DCC7;
+    border-radius: 8px;
+}
+QLabel.cardTitle, QLabel[class="cardTitle"] {
+    font-size: 17px;
+    font-weight: 700;
+}
+QLabel.muted, QLabel[class="muted"] {
+    color: #667085;
+}
+QLabel.metricValue, QLabel[class="metricValue"] {
+    font-size: 36px;
+    font-weight: 800;
+    color: #13231D;
+}
+QLabel.metricLabel, QLabel[class="metricLabel"] {
+    color: #667085;
+    font-weight: 700;
+}
+QPushButton {
+    background: white;
+    border: 1px solid #D6E3DC;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-weight: 700;
+}
+QPushButton:hover {
+    background: #F3FBF7;
+}
+QPushButton.primary, QPushButton[class="primary"] {
+    background: #1D7A57;
+    border-color: #1D7A57;
+    color: white;
+}
+QPushButton.primary:hover, QPushButton[class="primary"]:hover {
+    background: #176648;
+}
+QPushButton.danger, QPushButton[class="danger"] {
+    color: #B42318;
+    border-color: #F1B8B3;
+}
+QLineEdit, QComboBox, QSpinBox, QDateEdit {
+    background: white;
+    border: 1px solid #D6E3DC;
+    border-radius: 10px;
+    padding: 8px 12px;
+    min-height: 28px;
+}
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDateEdit:focus {
+    border: 1px solid #1D7A57;
+}
+QTableWidget {
+    background: white;
+    border: 1px solid #D6E3DC;
+    border-radius: 12px;
+    gridline-color: #E5EDE8;
+    selection-background-color: #E6F4EE;
+    selection-color: #13231D;
+}
+QHeaderView::section {
+    background: #F1F8F4;
+    color: #667085;
+    border: none;
+    border-bottom: 1px solid #D6E3DC;
+    padding: 10px;
+    font-weight: 700;
+}
+QStatusBar {
+    background: #F7FAF8;
+    color: #123D32;
+}
+)";
+
+QLabel *label(const QString &text, const QString &objectName = {}, QWidget *parent = nullptr)
+{
+    auto *result = new QLabel(text, parent);
+    if (!objectName.isEmpty()) {
+        result->setObjectName(objectName);
+    }
+    result->setWordWrap(true);
+    return result;
+}
+
+QFrame *card(QWidget *parent = nullptr)
+{
+    auto *frame = new QFrame(parent);
+    frame->setProperty("class", "card");
+    frame->setFrameShape(QFrame::NoFrame);
+    return frame;
+}
+
+QFrame *brandMark(QWidget *parent = nullptr)
+{
+    auto *mark = new QFrame(parent);
+    mark->setObjectName("brandMark");
+    auto *layout = new QVBoxLayout(mark);
+    layout->setContentsMargins(8, 6, 8, 7);
+    layout->setSpacing(3);
+    auto *letter = new QLabel("D", mark);
+    letter->setObjectName("brandMarkLetter");
+    letter->setAlignment(Qt::AlignCenter);
+    layout->addWidget(letter, 1);
+    auto *line = new QFrame(mark);
+    line->setObjectName("brandMiniLine");
+    layout->addWidget(line);
+    return mark;
+}
+
+QString assignmentText(const Student &student)
+{
+    if (!student.isAssigned()) {
+        return "Unassigned";
+    }
+    return student.dormitoryId().value() + " / Room " + QString::number(student.roomNumber().value());
+}
+
+struct Neighborhood {
+    QString id;
+    QString name;
+    QVector<QString> dormitoryIds;
+};
+
+struct AdminProfile {
+    QString username;
+    QString password;
+    QString displayName;
+    bool fullAccess = false;
+    QSet<QString> neighborhoodIds;
+};
+
+} // namespace
+
+class DormitoryWindow final : public QMainWindow {
+public:
+    DormitoryWindow()
+    {
+        seedData();
+        setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
+        setAttribute(Qt::WA_TranslucentBackground);
+        m_enableAnimations = !QCoreApplication::arguments().contains("--screenshot");
+        qApp->setFont(QFont("Segoe UI", 10));
+        qApp->setStyleSheet(kAppStyle);
+        buildLoginUi();
+        setWindowTitle("Dormora");
+        resize(1280, 780);
+        setMinimumSize(1100, 680);
+    }
+
+protected:
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton) {
+            m_draggingWindow = event->position().y() < 80 || event->position().x() < 260;
+            m_dragPosition = event->globalPosition().toPoint() - frameGeometry().topLeft();
+            event->accept();
+        }
+    }
+
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        if (m_draggingWindow && (event->buttons() & Qt::LeftButton)) {
+            move(event->globalPosition().toPoint() - m_dragPosition);
+            event->accept();
+        }
+    }
+
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        m_draggingWindow = false;
+        QMainWindow::mouseReleaseEvent(event);
+    }
+
+private:
+    enum class AuthRole {
+        None,
+        Admin,
+        Student,
+    };
+
+    University m_university;
+    QVector<Neighborhood> m_neighborhoods;
+    QHash<QString, AdminProfile> m_adminProfiles;
+    AuthRole m_role = AuthRole::None;
+    QString m_currentAdminUsername;
+    QString m_currentStudentId;
+    QPoint m_dragPosition;
+    bool m_draggingWindow = false;
+    bool m_enableAnimations = true;
+
+    QStackedWidget *m_stack = nullptr;
+    QLineEdit *m_loginUserInput = nullptr;
+    QLineEdit *m_loginPasswordInput = nullptr;
+    QLabel *m_loginFeedback = nullptr;
+
+    QLabel *m_residentsMetric = nullptr;
+    QLabel *m_availableRoomsMetric = nullptr;
+    QLabel *m_mealsMetric = nullptr;
+    QTableWidget *m_roomMatrix = nullptr;
+    QTableWidget *m_studentTable = nullptr;
+    QLineEdit *m_studentSearchInput = nullptr;
+    QComboBox *m_studentFilterInput = nullptr;
+    QLabel *m_studentCountLabel = nullptr;
+    QLabel *m_profileNameLabel = nullptr;
+    QLabel *m_profileMetaLabel = nullptr;
+    QLabel *m_profileAssignmentLabel = nullptr;
+    QLabel *m_profileRoomLabel = nullptr;
+    QLabel *m_profileAccessLabel = nullptr;
+    QLabel *m_profileStatusLabel = nullptr;
+    QLineEdit *m_profileNameInput = nullptr;
+    QSpinBox *m_profileYearInput = nullptr;
+    QVBoxLayout *m_todayMenuSummary = nullptr;
+    QTableWidget *m_neighborhoodTable = nullptr;
+    QGridLayout *m_residentList = nullptr;
+    QVBoxLayout *m_menuCards = nullptr;
+
+    QLineEdit *m_studentIdInput = nullptr;
+    QLineEdit *m_studentNameInput = nullptr;
+    QSpinBox *m_academicYearInput = nullptr;
+    QComboBox *m_assignStudentInput = nullptr;
+    QComboBox *m_assignDormitoryInput = nullptr;
+    QSpinBox *m_assignRoomInput = nullptr;
+
+    QComboBox *m_menuDormitoryInput = nullptr;
+    QDateEdit *m_menuDateInput = nullptr;
+    QLineEdit *m_breakfastInput = nullptr;
+    QLineEdit *m_lunchInput = nullptr;
+    QLineEdit *m_dinnerInput = nullptr;
+    QLineEdit *m_neighborhoodIdInput = nullptr;
+    QLineEdit *m_neighborhoodNameInput = nullptr;
+    QComboBox *m_copyNeighborhoodInput = nullptr;
+    QComboBox *m_adminAccessInput = nullptr;
+    QComboBox *m_neighborhoodAccessInput = nullptr;
+    QString m_selectedStudentId;
+
+    void seedData()
+    {
+        Dormitory north("D1", "North Dormitory", 6, Restaurant("North Restaurant"));
+        north.addRoom(Room(101, 2));
+        north.addRoom(Room(102, 2));
+        north.addRoom(Room(103, 2));
+
+        Dormitory south("D2", "South Dormitory", 4, Restaurant("South Restaurant"));
+        south.addRoom(Room(201, 2));
+        south.addRoom(Room(202, 2));
+
+        m_university.addDormitory(north);
+        m_university.addDormitory(south);
+        m_university.addStudent(Student("S1001", "Amina Benali", 1));
+        m_university.addStudent(Student("S1002", "Karim Haddad", 2));
+        m_university.addStudent(Student("S1003", "Lina Saadi", 3));
+        m_university.addStudent(Student("S1004", "Yanis Merad", 1));
+        m_university.assignStudentToRoom("S1001", "D1", 101);
+        m_university.assignStudentToRoom("S1002", "D1", 101);
+        m_university.assignStudentToRoom("S1003", "D1", 102);
+        m_university.assignStudentToRoom("S1004", "D2", 202);
+
+        const QDate today = QDate::currentDate();
+        m_university.setRestaurantMenu("D1", today, {"Coffee and eggs", "Chicken and rice", "Soup and salad"});
+        m_university.setRestaurantMenu("D2", today, {"Tea and bread", "Couscous", "Vegetable stew"});
+        m_university.recordStudentMeal("S1001", today);
+        m_university.recordStudentMeal("S1002", today);
+
+        m_neighborhoods.append({"NORTH", "North Campus Neighborhood", {"D1"}});
+        m_neighborhoods.append({"SOUTH", "South Campus Neighborhood", {"D2"}});
+
+        m_adminProfiles.insert("admin", {"admin", "admin123", "Global Administrator", true, {}});
+        m_adminProfiles.insert("northadmin", {"northadmin", "north123", "North Neighborhood Admin", false, {"NORTH"}});
+        m_adminProfiles.insert("southadmin", {"southadmin", "south123", "South Neighborhood Admin", false, {"SOUTH"}});
+    }
+
+    void buildLoginUi()
+    {
+        auto *root = new QWidget(this);
+        root->setObjectName("loginRoot");
+        auto *outer = new QHBoxLayout(root);
+        outer->setContentsMargins(0, 0, 0, 0);
+        outer->setSpacing(0);
+
+        auto *brandPanel = new QFrame(root);
+        brandPanel->setObjectName("loginBrand");
+        brandPanel->setFixedWidth(430);
+        auto *brandLayout = new QVBoxLayout(brandPanel);
+        brandLayout->setContentsMargins(42, 44, 42, 42);
+        brandLayout->setSpacing(14);
+        brandLayout->addWidget(buildBrandLockup(brandPanel, "Campus living, organized."));
+        brandLayout->addSpacing(28);
+        brandLayout->addWidget(label("Dorms, rooms, and meals in one calm workspace.", "loginBadge", brandPanel), 0, Qt::AlignLeft);
+        brandLayout->addSpacing(14);
+        auto *headline = label("Campus housing starts with Dormora.", "brand", brandPanel);
+        headline->setStyleSheet("QLabel#brand { font-size: 34px; line-height: 42px; }");
+        brandLayout->addWidget(headline);
+        auto *sub = label("Sign in once and Dormora opens the right workspace for housing staff or residents.", "brandSub", brandPanel);
+        sub->setStyleSheet("QLabel#brandSub { font-size: 14px; line-height: 21px; }");
+        brandLayout->addWidget(sub);
+        brandLayout->addStretch();
+        outer->addWidget(brandPanel);
+
+        auto *content = new QWidget(root);
+        content->setObjectName("contentPane");
+        auto *contentLayout = new QVBoxLayout(content);
+        contentLayout->setContentsMargins(90, 26, 90, 70);
+        contentLayout->setSpacing(20);
+        contentLayout->addWidget(buildWindowControls(), 0, Qt::AlignRight);
+        contentLayout->addStretch();
+
+        auto *loginCard = card(content);
+        loginCard->setMinimumWidth(500);
+        loginCard->setMaximumWidth(560);
+        auto *loginLayout = new QVBoxLayout(loginCard);
+        loginLayout->setContentsMargins(34, 32, 34, 34);
+        loginLayout->setSpacing(18);
+        loginLayout->addWidget(label("Sign in to Dormora", "pageTitle", loginCard));
+        loginLayout->addWidget(label("Use staff credentials for the management console, or a student ID for the resident portal.", "pageKicker", loginCard));
+
+        m_loginUserInput = new QLineEdit(loginCard);
+        m_loginUserInput->setPlaceholderText("Enter username or student ID");
+        m_loginUserInput->setMinimumHeight(44);
+        m_loginPasswordInput = new QLineEdit(loginCard);
+        m_loginPasswordInput->setPlaceholderText("Password");
+        m_loginPasswordInput->setEchoMode(QLineEdit::Password);
+        m_loginPasswordInput->setMinimumHeight(44);
+        loginLayout->addWidget(fieldLabel("Username / Student ID", m_loginUserInput));
+        loginLayout->addWidget(fieldLabel("Password", m_loginPasswordInput));
+
+        auto *button = new QPushButton("Continue to workspace", loginCard);
+        button->setMinimumHeight(44);
+        button->setProperty("class", "primary");
+        loginLayout->addWidget(button);
+        m_loginFeedback = classLabel("", "muted");
+        m_loginFeedback->setStyleSheet("QLabel { color: #B42318; font-weight: 700; }");
+        loginLayout->addWidget(m_loginFeedback);
+
+        connect(button, &QPushButton::clicked, this, [this] { authenticate(); });
+        connect(m_loginPasswordInput, &QLineEdit::returnPressed, this, [this] { authenticate(); });
+        connect(m_loginUserInput, &QLineEdit::returnPressed, this, [this] { authenticate(); });
+
+        contentLayout->addWidget(loginCard, 0, Qt::AlignHCenter);
+        contentLayout->addStretch();
+        outer->addWidget(content, 1);
+
+        setAppContent(root, true);
+        showStatus("");
+    }
+
+    QFrame *buildWindowControls()
+    {
+        auto *controls = new QFrame(this);
+        controls->setObjectName("titleControls");
+        auto *layout = new QHBoxLayout(controls);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(8);
+
+        auto *minimize = new QPushButton("-", controls);
+        minimize->setObjectName("windowButton");
+        auto *close = new QPushButton("x", controls);
+        close->setObjectName("closeButton");
+        close->setProperty("id", "windowButton");
+        close->setStyleSheet("QPushButton#closeButton { background: rgba(180,35,24,0.10); color: #B42318; border: none; border-radius: 13px; min-width: 26px; max-width: 26px; min-height: 26px; max-height: 26px; padding: 0; font-weight: 800; } QPushButton#closeButton:hover { background: #B42318; color: white; }");
+
+        connect(minimize, &QPushButton::clicked, this, [this] { showMinimized(); });
+        connect(close, &QPushButton::clicked, this, [this] { this->close(); });
+        layout->addWidget(minimize);
+        layout->addWidget(close);
+        return controls;
+    }
+
+    QWidget *buildBrandLockup(QWidget *parent, const QString &subtitle)
+    {
+        auto *wrap = new QWidget(parent);
+        auto *layout = new QHBoxLayout(wrap);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(12);
+        layout->addWidget(brandMark(wrap), 0, Qt::AlignTop);
+
+        auto *text = new QVBoxLayout();
+        text->setContentsMargins(0, 0, 0, 0);
+        text->setSpacing(2);
+        text->addWidget(label("Dormora", "brand", wrap));
+        text->addWidget(label(subtitle, "brandSub", wrap));
+        layout->addLayout(text, 1);
+        return wrap;
+    }
+
+    void setAppContent(QWidget *content, bool firstRender = false)
+    {
+        auto *chrome = new QFrame(this);
+        chrome->setObjectName("windowChrome");
+        auto *layout = new QVBoxLayout(chrome);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+        layout->addWidget(content);
+        setCentralWidget(chrome);
+
+        if (!m_enableAnimations) {
+            return;
+        }
+
+        auto *effect = new QGraphicsOpacityEffect(chrome);
+        chrome->setGraphicsEffect(effect);
+        auto *animation = new QPropertyAnimation(effect, "opacity", chrome);
+        animation->setDuration(firstRender ? 260 : 180);
+        animation->setStartValue(0.0);
+        animation->setEndValue(1.0);
+        animation->setEasingCurve(QEasingCurve::OutCubic);
+        connect(animation, &QPropertyAnimation::finished, chrome, [chrome] {
+            chrome->setGraphicsEffect(nullptr);
+        });
+        animation->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+
+    void authenticate()
+    {
+        const QString user = m_loginUserInput->text().trimmed();
+        const QString password = m_loginPasswordInput->text();
+
+        const QString adminKey = user.toLower();
+        if (m_adminProfiles.contains(adminKey) && m_adminProfiles.value(adminKey).password == password) {
+            m_role = AuthRole::Admin;
+            m_currentAdminUsername = adminKey;
+            m_currentStudentId.clear();
+            buildAdminUi();
+            refreshAll();
+            showStatus("Signed in as " + m_adminProfiles.value(adminKey).displayName + ".");
+            return;
+        }
+
+        const QString studentId = user.toUpper();
+        if (m_university.hasStudent(studentId) && password == "student123") {
+            m_role = AuthRole::Student;
+            m_currentStudentId = studentId;
+            buildStudentPortalUi();
+            showStatus("Signed in as " + m_university.student(studentId).fullName() + ".");
+            return;
+        }
+
+        m_loginFeedback->setText("Credentials not recognized. Try admin/admin123 or S1001/student123.");
+    }
+
+public:
+    void loginAsAdminForTest(const QString &username = "admin")
+    {
+        const QString key = username.toLower();
+        m_role = AuthRole::Admin;
+        m_currentAdminUsername = m_adminProfiles.contains(key) ? key : "admin";
+        m_currentStudentId.clear();
+        buildAdminUi();
+        refreshAll();
+        showStatus("Signed in as " + m_adminProfiles.value(m_currentAdminUsername).displayName + ".");
+    }
+
+    void loginAsStudentForTest(const QString &studentId)
+    {
+        m_role = AuthRole::Student;
+        m_currentStudentId = studentId;
+        buildStudentPortalUi();
+        showStatus("Signed in as " + m_university.student(studentId).fullName() + ".");
+    }
+
+    void showPageForTest(int index)
+    {
+        if (m_stack != nullptr && index >= 0 && index < m_stack->count()) {
+            m_stack->setCurrentIndex(index);
+        }
+    }
+
+private:
+    void logout()
+    {
+        m_role = AuthRole::None;
+        m_currentAdminUsername.clear();
+        m_currentStudentId.clear();
+        buildLoginUi();
+    }
+
+    void buildAdminUi()
+    {
+
+        auto *root = new QWidget(this);
+        root->setObjectName("appRoot");
+        auto *rootLayout = new QHBoxLayout(root);
+        rootLayout->setContentsMargins(0, 0, 0, 0);
+        rootLayout->setSpacing(0);
+
+        rootLayout->addWidget(buildSidebar());
+
+        m_stack = new QStackedWidget(root);
+        m_stack->addWidget(buildDashboardPage());
+        m_stack->addWidget(buildStudentsPage());
+        m_stack->addWidget(buildRestaurantPage());
+        m_stack->addWidget(buildNeighborhoodsPage());
+        rootLayout->addWidget(m_stack, 1);
+
+        setAppContent(root);
+    }
+
+    QWidget *buildSidebar()
+    {
+        auto *sidebar = new QFrame(this);
+        sidebar->setObjectName("sidebar");
+        sidebar->setFixedWidth(238);
+
+        auto *layout = new QVBoxLayout(sidebar);
+        layout->setContentsMargins(22, 28, 22, 22);
+        layout->setSpacing(10);
+        layout->addWidget(buildBrandLockup(sidebar, "Campus living, organized."));
+        layout->addSpacing(18);
+
+        auto *group = new QButtonGroup(sidebar);
+        group->setExclusive(true);
+
+        const QStringList items = {"Dashboard", "Residents", "Meals", "Neighborhoods"};
+        for (int i = 0; i < items.size(); ++i) {
+            auto *button = new QPushButton(items[i], sidebar);
+            button->setProperty("nav", true);
+            button->setCheckable(true);
+            button->setMinimumHeight(42);
+            group->addButton(button, i);
+            layout->addWidget(button);
+            connect(button, &QPushButton::clicked, this, [this, i] { m_stack->setCurrentIndex(i); });
+            if (i == 0) {
+                button->setChecked(true);
+            }
+        }
+
+        layout->addStretch();
+        auto *logoutButton = new QPushButton("Log out", sidebar);
+        logoutButton->setProperty("nav", true);
+        logoutButton->setMinimumHeight(42);
+        connect(logoutButton, &QPushButton::clicked, this, [this] { logout(); });
+        layout->addWidget(logoutButton);
+        auto *hint = label("Dormora Console\nLive campus data\nCompact Qt Widgets", "brandSub", sidebar);
+        if (!m_currentAdminUsername.isEmpty()) {
+            const AdminProfile profile = m_adminProfiles.value(m_currentAdminUsername);
+            hint->setText(profile.displayName + "\n" + (profile.fullAccess ? "Full access" : "Scoped access"));
+        }
+        layout->addWidget(hint);
+        return sidebar;
+    }
+
+    void buildStudentPortalUi()
+    {
+        auto *root = new QWidget(this);
+        root->setObjectName("studentRoot");
+        auto *rootLayout = new QHBoxLayout(root);
+        rootLayout->setContentsMargins(0, 0, 0, 0);
+        rootLayout->setSpacing(0);
+
+        auto *sidebar = new QFrame(root);
+        sidebar->setObjectName("studentSidebar");
+        sidebar->setFixedWidth(238);
+        auto *sideLayout = new QVBoxLayout(sidebar);
+        sideLayout->setContentsMargins(22, 28, 22, 22);
+        sideLayout->setSpacing(10);
+        sideLayout->addWidget(buildBrandLockup(sidebar, "Resident portal"));
+        sideLayout->addSpacing(16);
+        sideLayout->addWidget(label("Campus living, organized.", "brandSub", sidebar));
+        sideLayout->addStretch();
+        auto *logoutButton = new QPushButton("Log out", sidebar);
+        logoutButton->setProperty("nav", true);
+        logoutButton->setMinimumHeight(42);
+        connect(logoutButton, &QPushButton::clicked, this, [this] { logout(); });
+        sideLayout->addWidget(logoutButton);
+        rootLayout->addWidget(sidebar);
+
+        const Student &student = m_university.student(m_currentStudentId);
+        auto *page = pageContainer("Welcome, " + student.fullName(), "Your room status and meal access for today.", true);
+        auto *layout = qobject_cast<QVBoxLayout *>(page->layout());
+
+        auto *cards = new QHBoxLayout();
+        cards->setSpacing(18);
+        cards->addWidget(buildStudentIdentityCard(student));
+        cards->addWidget(buildStudentRoomCard(student));
+        layout->addLayout(cards);
+
+        auto *menuCard = card(page);
+        menuCard->setObjectName("studentCard");
+        auto *menuLayout = new QVBoxLayout(menuCard);
+        menuLayout->setContentsMargins(20, 18, 20, 20);
+        menuLayout->setSpacing(14);
+        menuLayout->addWidget(classLabel("Restaurant Menu", "cardTitle"));
+        if (student.isAssigned()) {
+            const Dormitory &dormitory = m_university.dormitory(student.dormitoryId().value());
+            const auto menu = dormitory.restaurant().menuForDate(QDate::currentDate());
+            menuLayout->addWidget(classLabel(dormitory.restaurant().name() + " - " + QDate::currentDate().toString("yyyy-MM-dd"), "muted"));
+            if (menu.has_value()) {
+                menuLayout->addWidget(mealRow("Breakfast", menu->breakfast));
+                menuLayout->addWidget(mealRow("Lunch", menu->lunch));
+                menuLayout->addWidget(mealRow("Dinner", menu->dinner));
+            } else {
+                menuLayout->addWidget(statusPill("No menu for today", "#FFF7E6", "#B7791F"));
+            }
+        } else {
+            menuLayout->addWidget(statusPill("Restaurant access requires a room assignment", "#FFF7E6", "#B7791F"));
+        }
+        layout->addWidget(menuCard, 1);
+
+        rootLayout->addWidget(page, 1);
+        setAppContent(root);
+    }
+
+    QWidget *buildStudentIdentityCard(const Student &student)
+    {
+        auto *box = card(this);
+        box->setObjectName("studentCard");
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(10);
+        layout->addWidget(statusPill(initials(student.fullName()), "#FFF3D8", "#7A4B00"));
+        layout->addWidget(classLabel(student.fullName(), "cardTitle"));
+        layout->addWidget(classLabel(student.id() + " - Academic year " + QString::number(student.academicYear()), "muted"));
+        layout->addWidget(statusPill(student.isAssigned() ? "Resident" : "Unassigned", student.isAssigned() ? "#E6F4EE" : "#FFF7E6", student.isAssigned() ? "#1D7A57" : "#B7791F"));
+        return box;
+    }
+
+    QWidget *buildStudentRoomCard(const Student &student)
+    {
+        auto *box = card(this);
+        box->setObjectName("studentCard");
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(10);
+        layout->addWidget(classLabel("Accommodation", "cardTitle"));
+        if (student.isAssigned()) {
+            const Dormitory &dormitory = m_university.dormitory(student.dormitoryId().value());
+            const Room &room = dormitory.room(student.roomNumber().value());
+            layout->addWidget(classLabel(dormitory.name(), "cardTitle"));
+            layout->addWidget(classLabel("Room " + QString::number(room.number()), "muted"));
+            layout->addWidget(classLabel(QString("Occupancy %1 / %2").arg(room.occupancy()).arg(room.capacity()), "muted"));
+        } else {
+            layout->addWidget(classLabel("No room assigned yet.", "muted"));
+        }
+        return box;
+    }
+
+    QWidget *buildDashboardPage()
+    {
+        auto *page = pageContainer("Dormora Dashboard", "Monitor capacity, resident distribution, and today's meal activity.");
+        auto *layout = qobject_cast<QVBoxLayout *>(page->layout());
+
+        auto *metrics = new QHBoxLayout();
+        metrics->setSpacing(16);
+        m_residentsMetric = addMetric(metrics, "Residents", "0", "Assigned and unassigned students");
+        m_availableRoomsMetric = addMetric(metrics, "Open Beds", "0", "Available room capacity");
+        m_mealsMetric = addMetric(metrics, "Meals Today", "0", "Recorded resident meals");
+        layout->addLayout(metrics);
+
+        auto *main = new QHBoxLayout();
+        main->setSpacing(18);
+        main->addWidget(buildRoomMatrixCard(), 2);
+        main->addWidget(buildTodayMenuSummaryCard(), 1);
+        layout->addLayout(main, 1);
+
+        return page;
+    }
+
+    QWidget *buildStudentsPage()
+    {
+        auto *page = pageContainer("Resident Desk", "Search by student ID or name, then review and modify the selected resident profile.");
+        auto *layout = qobject_cast<QVBoxLayout *>(page->layout());
+
+        auto *split = new QHBoxLayout();
+        split->setSpacing(18);
+        split->addWidget(buildStudentSearchCard(), 5);
+        split->addWidget(buildStudentProfileCard(), 4);
+        layout->addLayout(split, 1);
+
+        return page;
+    }
+
+    QWidget *buildRestaurantPage()
+    {
+        auto *page = pageContainer("Meal Desk", "Set daily menus and review resident meal access for each dormitory restaurant.");
+        auto *layout = qobject_cast<QVBoxLayout *>(page->layout());
+
+        auto *split = new QHBoxLayout();
+        split->setSpacing(18);
+        split->addWidget(buildMenuEditorCard(), 1);
+
+        auto *preview = card(page);
+        auto *previewLayout = new QVBoxLayout(preview);
+        previewLayout->setContentsMargins(20, 18, 20, 20);
+        previewLayout->setSpacing(14);
+        previewLayout->addWidget(classLabel("Daily Menu Cards", "cardTitle"));
+        auto *scroll = new QScrollArea(preview);
+        scroll->setWidgetResizable(true);
+        scroll->setFrameShape(QFrame::NoFrame);
+        auto *content = new QWidget(scroll);
+        m_menuCards = new QVBoxLayout(content);
+        m_menuCards->setContentsMargins(0, 0, 0, 0);
+        m_menuCards->setSpacing(12);
+        scroll->setWidget(content);
+        previewLayout->addWidget(scroll);
+        split->addWidget(preview, 2);
+
+        layout->addLayout(split, 1);
+        return page;
+    }
+
+    QWidget *buildNeighborhoodsPage()
+    {
+        auto *page = pageContainer("Dorm Neighborhoods", "Group dormitories into neighborhoods, copy them, and control which admins can manage each group.");
+        auto *layout = qobject_cast<QVBoxLayout *>(page->layout());
+
+        auto *split = new QHBoxLayout();
+        split->setSpacing(18);
+
+        auto *tableCard = card(page);
+        auto *tableLayout = new QVBoxLayout(tableCard);
+        tableLayout->setContentsMargins(20, 18, 20, 20);
+        tableLayout->setSpacing(14);
+        tableLayout->addWidget(classLabel("Neighborhood Registry", "cardTitle"));
+        m_neighborhoodTable = new QTableWidget(tableCard);
+        setupTable(m_neighborhoodTable, {"ID", "Name", "Dormitories", "Admins"});
+        tableLayout->addWidget(m_neighborhoodTable, 1);
+        split->addWidget(tableCard, 2);
+
+        auto *controls = new QVBoxLayout();
+        controls->setSpacing(18);
+        controls->addWidget(buildNeighborhoodEditorCard());
+        controls->addWidget(buildAccessEditorCard());
+        split->addLayout(controls, 1);
+        layout->addLayout(split, 1);
+        return page;
+    }
+
+    QWidget *buildNeighborhoodEditorCard()
+    {
+        auto *box = card(this);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(10);
+        layout->addWidget(classLabel("Add / Copy Neighborhood", "cardTitle"));
+
+        m_neighborhoodIdInput = new QLineEdit(box);
+        m_neighborhoodIdInput->setPlaceholderText("EAST");
+        m_neighborhoodNameInput = new QLineEdit(box);
+        m_neighborhoodNameInput->setPlaceholderText("East Campus Neighborhood");
+        m_copyNeighborhoodInput = new QComboBox(box);
+
+        layout->addWidget(fieldLabel("New ID", m_neighborhoodIdInput));
+        layout->addWidget(fieldLabel("New Name", m_neighborhoodNameInput));
+        layout->addWidget(fieldLabel("Copy From", m_copyNeighborhoodInput));
+
+        auto *row = new QHBoxLayout();
+        auto *add = new QPushButton("Add empty", box);
+        add->setProperty("class", "primary");
+        auto *copy = new QPushButton("Copy", box);
+        row->addWidget(add);
+        row->addWidget(copy);
+        layout->addLayout(row);
+
+        connect(add, &QPushButton::clicked, this, [this] { addNeighborhood(); });
+        connect(copy, &QPushButton::clicked, this, [this] { copyNeighborhood(); });
+        return box;
+    }
+
+    QWidget *buildAccessEditorCard()
+    {
+        auto *box = card(this);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(10);
+        layout->addWidget(classLabel("Admin Access", "cardTitle"));
+
+        m_adminAccessInput = new QComboBox(box);
+        m_neighborhoodAccessInput = new QComboBox(box);
+        layout->addWidget(fieldLabel("Admin", m_adminAccessInput));
+        layout->addWidget(fieldLabel("Neighborhood", m_neighborhoodAccessInput));
+
+        auto *row = new QHBoxLayout();
+        auto *grant = new QPushButton("Grant", box);
+        grant->setProperty("class", "primary");
+        auto *revoke = new QPushButton("Revoke", box);
+        revoke->setStyleSheet("QPushButton { color: #B42318; border-color: #F1B8B3; }");
+        row->addWidget(grant);
+        row->addWidget(revoke);
+        layout->addLayout(row);
+
+        connect(grant, &QPushButton::clicked, this, [this] { grantNeighborhoodAccess(); });
+        connect(revoke, &QPushButton::clicked, this, [this] { revokeNeighborhoodAccess(); });
+        return box;
+    }
+
+    QWidget *pageContainer(const QString &title, const QString &subtitle, bool studentTone = false)
+    {
+        auto *page = new QWidget(this);
+        page->setObjectName(studentTone ? "studentContentPane" : "contentPane");
+        auto *layout = new QVBoxLayout(page);
+        layout->setContentsMargins(30, 28, 30, 28);
+        layout->setSpacing(18);
+        auto *titleRow = new QHBoxLayout();
+        titleRow->setSpacing(12);
+        titleRow->addWidget(label(title, "pageTitle", page));
+        titleRow->addWidget(statusPill(studentTone ? "Dormora resident" : "Dormora console",
+                                       studentTone ? "#FFF3D8" : "#E6F4EE",
+                                       studentTone ? "#7A4B00" : "#1D7A57"));
+        titleRow->addStretch();
+        titleRow->addWidget(buildWindowControls());
+        layout->addLayout(titleRow);
+        layout->addWidget(label(subtitle, "pageKicker", page));
+        return page;
+    }
+
+    QLabel *addMetric(QHBoxLayout *layout, const QString &name, const QString &value, const QString &description)
+    {
+        auto *box = card(this);
+        box->setMinimumHeight(126);
+        auto *inner = new QVBoxLayout(box);
+        inner->setContentsMargins(18, 16, 18, 16);
+        inner->setSpacing(4);
+        auto *nameLabel = classLabel(name, "metricLabel");
+        auto *valueLabel = classLabel(value, "metricValue");
+        inner->addWidget(nameLabel);
+        inner->addWidget(valueLabel);
+        inner->addWidget(classLabel(description, "muted"));
+        layout->addWidget(box);
+        return valueLabel;
+    }
+
+    QWidget *buildRoomMatrixCard()
+    {
+        auto *box = card(this);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(14);
+        auto *top = new QHBoxLayout();
+        top->addWidget(classLabel("Dormitory Room Matrix", "cardTitle"));
+        top->addStretch();
+        top->addWidget(statusPill("capacity rules", "#E6F4EE", "#1D7A57"));
+        layout->addLayout(top);
+
+        m_roomMatrix = new QTableWidget(box);
+        setupTable(m_roomMatrix, {"Dormitory", "Room", "Capacity", "Residents", "State"});
+        layout->addWidget(m_roomMatrix, 1);
+        return box;
+    }
+
+    QWidget *buildTodayMenuSummaryCard()
+    {
+        auto *box = card(this);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(14);
+        layout->addWidget(classLabel("Today Menu", "cardTitle"));
+        auto *note = classLabel("Restaurant menus are tied to dormitories. Only assigned residents can access them in the backend.", "muted");
+        note->setWordWrap(true);
+        layout->addWidget(note);
+        m_todayMenuSummary = new QVBoxLayout();
+        m_todayMenuSummary->setSpacing(10);
+        layout->addLayout(m_todayMenuSummary);
+        layout->addWidget(statusPill("resident-only access", "#E6F4EE", "#1D7A57"));
+        layout->addStretch();
+        return box;
+    }
+
+    QWidget *buildStudentSearchCard()
+    {
+        auto *box = card(this);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(14);
+        auto *top = new QHBoxLayout();
+        top->addWidget(classLabel("Find Student", "cardTitle"));
+        top->addStretch();
+        m_studentCountLabel = classLabel("0 visible", "muted");
+        top->addWidget(m_studentCountLabel);
+        layout->addLayout(top);
+
+        m_studentSearchInput = new QLineEdit(box);
+        m_studentSearchInput->setPlaceholderText("Search by name or student ID");
+        m_studentSearchInput->setMinimumHeight(42);
+        layout->addWidget(m_studentSearchInput);
+
+        auto *filterRow = new QHBoxLayout();
+        filterRow->setSpacing(8);
+        m_studentFilterInput = new QComboBox(box);
+        m_studentFilterInput->addItem("All students", "all");
+        m_studentFilterInput->addItem("Assigned only", "assigned");
+        m_studentFilterInput->addItem("Unassigned only", "unassigned");
+        auto *clearSearch = new QPushButton("Clear", box);
+        filterRow->addWidget(m_studentFilterInput, 1);
+        filterRow->addWidget(clearSearch);
+        layout->addLayout(filterRow);
+
+        m_studentTable = new QTableWidget(box);
+        setupTable(m_studentTable, {"ID", "Full Name", "Year", "Assignment"});
+        layout->addWidget(m_studentTable, 1);
+
+        auto *addBox = new QFrame(box);
+        addBox->setObjectName("studentInlinePanel");
+        addBox->setStyleSheet("QFrame#studentInlinePanel { background: #F3FBF7; border: 1px solid #D6E3DC; border-radius: 14px; }");
+        auto *addLayout = new QVBoxLayout(addBox);
+        addLayout->setContentsMargins(14, 12, 14, 14);
+        addLayout->setSpacing(8);
+        addLayout->addWidget(classLabel("Add Student", "cardTitle"));
+        m_studentIdInput = new QLineEdit(addBox);
+        m_studentIdInput->setPlaceholderText("S1005");
+        m_studentNameInput = new QLineEdit(addBox);
+        m_studentNameInput->setPlaceholderText("Full name");
+        m_academicYearInput = new QSpinBox(addBox);
+        m_academicYearInput->setRange(1, 8);
+        addLayout->addWidget(fieldLabel("Student ID", m_studentIdInput));
+        addLayout->addWidget(fieldLabel("Full Name", m_studentNameInput));
+        addLayout->addWidget(fieldLabel("Academic Year", m_academicYearInput));
+        auto *addButton = new QPushButton("Add student", addBox);
+        addButton->setProperty("class", "primary");
+        addButton->setObjectName("addStudentButton");
+        addLayout->addWidget(addButton);
+        layout->addWidget(addBox);
+
+        connect(m_studentSearchInput, &QLineEdit::textChanged, this, [this] { refreshStudents(); });
+        connect(m_studentFilterInput, &QComboBox::currentIndexChanged, this, [this] { refreshStudents(); });
+        connect(clearSearch, &QPushButton::clicked, this, [this] {
+            m_studentSearchInput->clear();
+            m_studentFilterInput->setCurrentIndex(0);
+        });
+        connect(m_studentTable, &QTableWidget::itemSelectionChanged, this, [this] { selectStudentFromTable(); });
+        connect(addButton, &QPushButton::clicked, this, [this] { addStudent(); });
+        return box;
+    }
+
+    QWidget *buildStudentProfileCard()
+    {
+        auto *box = card(this);
+        box->setMinimumWidth(420);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(18, 16, 18, 18);
+        layout->setSpacing(10);
+
+        layout->addWidget(classLabel("Student Profile", "cardTitle"));
+        auto *scroll = new QScrollArea(box);
+        scroll->setWidgetResizable(true);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setStyleSheet("QScrollArea { background: transparent; border: none; } QScrollArea > QWidget > QWidget { background: transparent; }");
+        auto *content = new QWidget(scroll);
+        content->setStyleSheet("background: transparent;");
+        auto *profileLayout = new QVBoxLayout(content);
+        profileLayout->setContentsMargins(0, 0, 0, 0);
+        profileLayout->setSpacing(8);
+
+        m_profileNameLabel = classLabel("No student selected", "cardTitle");
+        m_profileMetaLabel = classLabel("Search for a student by name or ID.", "muted");
+        m_profileAssignmentLabel = classLabel("Assignment will appear here.", "muted");
+        m_profileRoomLabel = classLabel("Room details will appear here.", "muted");
+        m_profileAccessLabel = classLabel("Access scope will appear here.", "muted");
+        profileLayout->addWidget(m_profileNameLabel);
+        profileLayout->addWidget(m_profileMetaLabel);
+        profileLayout->addWidget(m_profileAssignmentLabel);
+        profileLayout->addWidget(m_profileRoomLabel);
+        profileLayout->addWidget(m_profileAccessLabel);
+
+        m_profileNameInput = new QLineEdit(box);
+        m_profileNameInput->setPlaceholderText("Full name");
+        m_profileYearInput = new QSpinBox(box);
+        m_profileYearInput->setRange(1, 8);
+        profileLayout->addWidget(fieldLabel("Modify Full Name", m_profileNameInput));
+        profileLayout->addWidget(fieldLabel("Modify Academic Year", m_profileYearInput));
+
+        auto *save = new QPushButton("Save changes", box);
+        save->setProperty("class", "primary");
+        save->setMinimumHeight(40);
+        save->setStyleSheet("QPushButton { background: #1D7A57; border: 1px solid #1D7A57; border-radius: 10px; color: white; font-weight: 800; padding: 9px 14px; } QPushButton:hover { background: #176648; }");
+        connect(save, &QPushButton::clicked, this, [this] { saveSelectedStudent(); });
+        profileLayout->addWidget(save);
+
+        auto *utilityRow = new QHBoxLayout();
+        auto *reset = new QPushButton("Reset edits", box);
+        auto *duplicate = new QPushButton("Duplicate", box);
+        auto *deleteButton = new QPushButton("Delete", box);
+        deleteButton->setStyleSheet("QPushButton { color: #B42318; border-color: #F1B8B3; }");
+        utilityRow->addWidget(reset);
+        utilityRow->addWidget(duplicate);
+        utilityRow->addWidget(deleteButton);
+        profileLayout->addLayout(utilityRow);
+        connect(reset, &QPushButton::clicked, this, [this] { resetSelectedStudentEdits(); });
+        connect(duplicate, &QPushButton::clicked, this, [this] { duplicateSelectedStudent(); });
+        connect(deleteButton, &QPushButton::clicked, this, [this] { deleteSelectedStudent(); });
+
+        profileLayout->addSpacing(8);
+        profileLayout->addWidget(classLabel("Accommodation Actions", "cardTitle"));
+        m_assignDormitoryInput = new QComboBox(box);
+        m_assignRoomInput = new QSpinBox(box);
+        m_assignRoomInput->setRange(1, 9999);
+        profileLayout->addWidget(fieldLabel("Dormitory", m_assignDormitoryInput));
+        profileLayout->addWidget(fieldLabel("Room Number", m_assignRoomInput));
+
+        auto *actionRow = new QHBoxLayout();
+        auto *assign = new QPushButton("Assign", box);
+        assign->setProperty("class", "primary");
+        auto *remove = new QPushButton("Remove", box);
+        remove->setStyleSheet("QPushButton { color: #B42318; border-color: #F1B8B3; }");
+        actionRow->addWidget(assign);
+        actionRow->addWidget(remove);
+        profileLayout->addLayout(actionRow);
+        connect(assign, &QPushButton::clicked, this, [this] { assignSelectedStudent(); });
+        connect(remove, &QPushButton::clicked, this, [this] { removeSelectedAssignment(); });
+        connect(m_assignDormitoryInput, &QComboBox::currentIndexChanged, this, [this] { updateSuggestedRoomNumber(); });
+        m_profileStatusLabel = classLabel("", "muted");
+        m_profileStatusLabel->setWordWrap(true);
+        profileLayout->addWidget(m_profileStatusLabel);
+        scroll->setWidget(content);
+        layout->addWidget(scroll, 1);
+
+        updateSelectedStudentProfile();
+        return box;
+    }
+
+    QWidget *buildAddStudentCard()
+    {
+        auto *box = card(this);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(10);
+        layout->addWidget(classLabel("Add Student", "cardTitle"));
+        m_studentIdInput = new QLineEdit(box);
+        m_studentIdInput->setPlaceholderText("S1005");
+        m_studentNameInput = new QLineEdit(box);
+        m_studentNameInput->setPlaceholderText("Full name");
+        m_academicYearInput = new QSpinBox(box);
+        m_academicYearInput->setRange(1, 8);
+        layout->addWidget(fieldLabel("Student ID", m_studentIdInput));
+        layout->addWidget(fieldLabel("Full Name", m_studentNameInput));
+        layout->addWidget(fieldLabel("Academic Year", m_academicYearInput));
+        auto *button = new QPushButton("Add student", box);
+        button->setProperty("class", "primary");
+        button->setObjectName("addStudentButton");
+        connect(button, &QPushButton::clicked, this, [this] { addStudent(); });
+        layout->addWidget(button);
+        return box;
+    }
+
+    QWidget *buildAllocationCard()
+    {
+        auto *box = card(this);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(10);
+        layout->addWidget(classLabel("Room Allocation", "cardTitle"));
+        m_assignStudentInput = new QComboBox(box);
+        m_assignDormitoryInput = new QComboBox(box);
+        m_assignRoomInput = new QSpinBox(box);
+        m_assignRoomInput->setRange(1, 9999);
+        layout->addWidget(fieldLabel("Student", m_assignStudentInput));
+        layout->addWidget(fieldLabel("Dormitory", m_assignDormitoryInput));
+        layout->addWidget(fieldLabel("Room Number", m_assignRoomInput));
+
+        auto *row = new QHBoxLayout();
+        auto *assign = new QPushButton("Assign", box);
+        assign->setProperty("class", "primary");
+        auto *remove = new QPushButton("Remove", box);
+        remove->setProperty("class", "danger");
+        remove->setStyleSheet("QPushButton { color: #B42318; border-color: #F1B8B3; }");
+        row->addWidget(assign);
+        row->addWidget(remove);
+        layout->addLayout(row);
+
+        connect(assign, &QPushButton::clicked, this, [this] { assignStudent(); });
+        connect(remove, &QPushButton::clicked, this, [this] { removeAssignment(); });
+        connect(m_assignDormitoryInput, &QComboBox::currentIndexChanged, this, [this] { updateSuggestedRoomNumber(); });
+        return box;
+    }
+
+    QWidget *buildMenuEditorCard()
+    {
+        auto *box = card(this);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 18, 20, 20);
+        layout->setSpacing(10);
+        layout->addWidget(classLabel("Daily Menu Editor", "cardTitle"));
+        m_menuDormitoryInput = new QComboBox(box);
+        m_menuDateInput = new QDateEdit(QDate::currentDate(), box);
+        m_menuDateInput->setCalendarPopup(true);
+        m_breakfastInput = new QLineEdit(box);
+        m_lunchInput = new QLineEdit(box);
+        m_dinnerInput = new QLineEdit(box);
+        m_breakfastInput->setPlaceholderText("Coffee and eggs");
+        m_lunchInput->setPlaceholderText("Chicken and rice");
+        m_dinnerInput->setPlaceholderText("Soup and salad");
+
+        layout->addWidget(fieldLabel("Dormitory", m_menuDormitoryInput));
+        layout->addWidget(fieldLabel("Date", m_menuDateInput));
+        layout->addWidget(fieldLabel("Breakfast", m_breakfastInput));
+        layout->addWidget(fieldLabel("Lunch", m_lunchInput));
+        layout->addWidget(fieldLabel("Dinner", m_dinnerInput));
+        auto *button = new QPushButton("Save menu", box);
+        button->setProperty("class", "primary");
+        connect(button, &QPushButton::clicked, this, [this] { saveMenu(); });
+        connect(m_menuDateInput, &QDateEdit::dateChanged, this, [this] { refreshMenuCards(); });
+        layout->addWidget(button);
+        layout->addStretch();
+        return box;
+    }
+
+    QWidget *fieldLabel(const QString &name, QWidget *input)
+    {
+        auto *wrap = new QWidget(this);
+        auto *layout = new QVBoxLayout(wrap);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(7);
+        layout->addWidget(classLabel(name, "muted"));
+        layout->addWidget(input);
+        return wrap;
+    }
+
+    QLabel *classLabel(const QString &text, const QString &className)
+    {
+        auto *result = new QLabel(text, this);
+        result->setProperty("class", className);
+        result->setWordWrap(true);
+        return result;
+    }
+
+    QLabel *statusPill(const QString &text, const QString &background, const QString &foreground)
+    {
+        auto *pill = new QLabel(text, this);
+        pill->setAlignment(Qt::AlignCenter);
+        pill->setStyleSheet(QString("QLabel { background: %1; color: %2; border-radius: 12px; padding: 5px 10px; font-weight: 700; }")
+                                .arg(background, foreground));
+        return pill;
+    }
+
+    bool currentAdminHasFullAccess() const
+    {
+        return !m_currentAdminUsername.isEmpty() && m_adminProfiles.value(m_currentAdminUsername).fullAccess;
+    }
+
+    bool currentAdminCanAccessNeighborhood(const QString &neighborhoodId) const
+    {
+        if (currentAdminHasFullAccess()) {
+            return true;
+        }
+        return !m_currentAdminUsername.isEmpty()
+            && m_adminProfiles.value(m_currentAdminUsername).neighborhoodIds.contains(neighborhoodId);
+    }
+
+    QString neighborhoodForDormitory(const QString &dormitoryId) const
+    {
+        for (const Neighborhood &neighborhood : m_neighborhoods) {
+            if (neighborhood.dormitoryIds.contains(dormitoryId)) {
+                return neighborhood.id;
+            }
+        }
+        return {};
+    }
+
+    bool currentAdminCanAccessDormitory(const QString &dormitoryId) const
+    {
+        const QString neighborhoodId = neighborhoodForDormitory(dormitoryId);
+        return neighborhoodId.isEmpty() ? currentAdminHasFullAccess() : currentAdminCanAccessNeighborhood(neighborhoodId);
+    }
+
+    QVector<Dormitory> visibleDormitories() const
+    {
+        QVector<Dormitory> result;
+        for (const Dormitory &dormitory : m_university.dormitories()) {
+            if (currentAdminCanAccessDormitory(dormitory.id())) {
+                result.append(dormitory);
+            }
+        }
+        return result;
+    }
+
+    QVector<Student> visibleStudents() const
+    {
+        QVector<Student> result;
+        for (const Student &student : m_university.students()) {
+            if (!student.isAssigned() || currentAdminCanAccessDormitory(student.dormitoryId().value())) {
+                result.append(student);
+            }
+        }
+        return result;
+    }
+
+    Neighborhood *findNeighborhood(const QString &id)
+    {
+        for (Neighborhood &neighborhood : m_neighborhoods) {
+            if (neighborhood.id == id) {
+                return &neighborhood;
+            }
+        }
+        return nullptr;
+    }
+
+    const Neighborhood *findNeighborhood(const QString &id) const
+    {
+        for (const Neighborhood &neighborhood : m_neighborhoods) {
+            if (neighborhood.id == id) {
+                return &neighborhood;
+            }
+        }
+        return nullptr;
+    }
+
+    void setupTable(QTableWidget *table, const QStringList &headers)
+    {
+        table->setColumnCount(headers.size());
+        table->setHorizontalHeaderLabels(headers);
+        table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        table->verticalHeader()->setVisible(false);
+        table->setAlternatingRowColors(false);
+        table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        table->setSelectionBehavior(QAbstractItemView::SelectRows);
+        table->setSelectionMode(QAbstractItemView::SingleSelection);
+        table->setShowGrid(false);
+    }
+
+    void addStudent()
+    {
+        runAction([this] {
+            const QString newStudentId = m_studentIdInput->text().trimmed().toUpper();
+            if (newStudentId.isEmpty() || m_studentNameInput->text().trimmed().isEmpty()) {
+                throw DomainError("Student ID and full name are required.");
+            }
+            m_university.addStudent(Student(
+                newStudentId,
+                m_studentNameInput->text().trimmed(),
+                m_academicYearInput->value()));
+            m_selectedStudentId = newStudentId;
+            m_studentSearchInput->setText(newStudentId);
+            m_studentIdInput->clear();
+            m_studentNameInput->clear();
+            setStudentPanelMessage("Student added.");
+        });
+    }
+
+    void saveSelectedStudent()
+    {
+        runAction([this] {
+            Student &student = selectedStudent();
+            if (m_profileNameInput->text().trimmed().isEmpty()) {
+                throw DomainError("Student full name is required.");
+            }
+            student.setFullName(m_profileNameInput->text().trimmed());
+            student.setAcademicYear(m_profileYearInput->value());
+            setStudentPanelMessage("Student profile updated.");
+        });
+    }
+
+    void resetSelectedStudentEdits()
+    {
+        updateSelectedStudentProfile();
+        setStudentPanelMessage("Unsaved edits reset.");
+    }
+
+    void duplicateSelectedStudent()
+    {
+        runAction([this] {
+            const Student &student = selectedStudent();
+            const QString newId = nextStudentId();
+            m_university.addStudent(Student(newId, student.fullName() + " Copy", student.academicYear()));
+            m_selectedStudentId = newId;
+            m_studentSearchInput->setText(newId);
+            setStudentPanelMessage("Student duplicated as " + newId + ".");
+        });
+    }
+
+    void deleteSelectedStudent()
+    {
+        if (m_selectedStudentId.isEmpty() || !m_university.hasStudent(m_selectedStudentId)) {
+            QMessageBox::warning(this, "Rule feedback", "Select a student first.");
+            return;
+        }
+
+        const Student &student = m_university.student(m_selectedStudentId);
+        const QMessageBox::StandardButton answer = QMessageBox::question(
+            this,
+            "Delete student",
+            "Delete " + student.fullName() + " (" + student.id() + ")? This also clears their room assignment.",
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        if (answer != QMessageBox::Yes) {
+            return;
+        }
+
+        runAction([this] {
+            const QString removedId = m_selectedStudentId;
+            m_university.removeStudent(removedId);
+            m_selectedStudentId.clear();
+            if (m_studentSearchInput != nullptr && m_studentSearchInput->text().trimmed().compare(removedId, Qt::CaseInsensitive) == 0) {
+                m_studentSearchInput->clear();
+            }
+            setStudentPanelMessage("Student deleted.");
+        });
+    }
+
+    void assignSelectedStudent()
+    {
+        runAction([this] {
+            Student &student = selectedStudent();
+            if (student.isAssigned()) {
+                throw DomainError("Remove this student's current room before assigning a new one.");
+            }
+            const QString dormitoryId = m_assignDormitoryInput->currentData().toString();
+            if (!currentAdminCanAccessDormitory(dormitoryId)) {
+                throw DomainError("This admin cannot assign students in that dormitory.");
+            }
+            m_university.assignStudentToRoom(student.id(), dormitoryId, m_assignRoomInput->value());
+            setStudentPanelMessage("Student assigned to room.");
+        });
+    }
+
+    void removeSelectedAssignment()
+    {
+        runAction([this] {
+            Student &student = selectedStudent();
+            if (student.isAssigned() && !currentAdminCanAccessDormitory(student.dormitoryId().value())) {
+                throw DomainError("This admin cannot remove assignments in that dormitory.");
+            }
+            m_university.removeStudentFromRoom(student.id());
+            setStudentPanelMessage("Student removed from room.");
+        });
+    }
+
+    void assignStudent()
+    {
+        runAction([this] {
+            if (!currentAdminCanAccessDormitory(m_assignDormitoryInput->currentData().toString())) {
+                throw DomainError("This admin cannot assign students in that dormitory.");
+            }
+            m_university.assignStudentToRoom(
+                m_assignStudentInput->currentData().toString(),
+                m_assignDormitoryInput->currentData().toString(),
+                m_assignRoomInput->value());
+            showStatus("Student assigned to room.");
+        });
+    }
+
+    void removeAssignment()
+    {
+        runAction([this] {
+            const Student &targetStudent = m_university.student(m_assignStudentInput->currentData().toString());
+            if (targetStudent.isAssigned() && !currentAdminCanAccessDormitory(targetStudent.dormitoryId().value())) {
+                throw DomainError("This admin cannot remove assignments in that dormitory.");
+            }
+            m_university.removeStudentFromRoom(m_assignStudentInput->currentData().toString());
+            showStatus("Student removed from room.");
+        });
+    }
+
+    void saveMenu()
+    {
+        runAction([this] {
+            if (!currentAdminCanAccessDormitory(m_menuDormitoryInput->currentData().toString())) {
+                throw DomainError("This admin cannot edit that dormitory restaurant.");
+            }
+            m_university.setRestaurantMenu(
+                m_menuDormitoryInput->currentData().toString(),
+                m_menuDateInput->date(),
+                {m_breakfastInput->text().trimmed(), m_lunchInput->text().trimmed(), m_dinnerInput->text().trimmed()});
+            showStatus("Menu saved.");
+        });
+    }
+
+    void addNeighborhood()
+    {
+        runAction([this] {
+            requireFullAccess();
+            const QString id = m_neighborhoodIdInput->text().trimmed().toUpper();
+            const QString name = m_neighborhoodNameInput->text().trimmed();
+            if (id.isEmpty() || name.isEmpty()) {
+                throw DomainError("Neighborhood ID and name are required.");
+            }
+            if (findNeighborhood(id) != nullptr) {
+                throw DomainError("Neighborhood already exists.");
+            }
+            m_neighborhoods.append({id, name, {}});
+            m_adminProfiles[m_currentAdminUsername].neighborhoodIds.insert(id);
+            m_neighborhoodIdInput->clear();
+            m_neighborhoodNameInput->clear();
+            showStatus("Neighborhood added.");
+        });
+    }
+
+    void copyNeighborhood()
+    {
+        runAction([this] {
+            requireFullAccess();
+            const QString sourceId = m_copyNeighborhoodInput->currentData().toString();
+            const Neighborhood *source = findNeighborhood(sourceId);
+            if (source == nullptr) {
+                throw DomainError("Choose a neighborhood to copy.");
+            }
+
+            const QString id = m_neighborhoodIdInput->text().trimmed().toUpper();
+            const QString name = m_neighborhoodNameInput->text().trimmed();
+            if (id.isEmpty() || name.isEmpty()) {
+                throw DomainError("New neighborhood ID and name are required.");
+            }
+            if (findNeighborhood(id) != nullptr) {
+                throw DomainError("Neighborhood already exists.");
+            }
+
+            Neighborhood copy{id, name, {}};
+            int dormIndex = 1;
+            for (const QString &sourceDormitoryId : source->dormitoryIds) {
+                const Dormitory &sourceDormitory = m_university.dormitory(sourceDormitoryId);
+                const QString newDormitoryId = id + "-D" + QString::number(dormIndex);
+                Dormitory newDormitory(
+                    newDormitoryId,
+                    name + " Residence " + QString::number(dormIndex),
+                    sourceDormitory.capacity(),
+                    Restaurant(name + " Restaurant " + QString::number(dormIndex)));
+                for (const Room &room : sourceDormitory.rooms()) {
+                    newDormitory.addRoom(Room(room.number(), room.capacity()));
+                }
+                m_university.addDormitory(newDormitory);
+                copy.dormitoryIds.append(newDormitoryId);
+                ++dormIndex;
+            }
+
+            m_neighborhoods.append(copy);
+            m_adminProfiles[m_currentAdminUsername].neighborhoodIds.insert(id);
+            m_neighborhoodIdInput->clear();
+            m_neighborhoodNameInput->clear();
+            showStatus("Neighborhood copied.");
+        });
+    }
+
+    void grantNeighborhoodAccess()
+    {
+        runAction([this] {
+            requireFullAccess();
+            const QString username = m_adminAccessInput->currentData().toString();
+            const QString neighborhoodId = m_neighborhoodAccessInput->currentData().toString();
+            if (!m_adminProfiles.contains(username) || findNeighborhood(neighborhoodId) == nullptr) {
+                throw DomainError("Choose a valid admin and neighborhood.");
+            }
+            if (m_adminProfiles[username].fullAccess) {
+                throw DomainError("Global administrators already have access to every neighborhood.");
+            }
+            m_adminProfiles[username].neighborhoodIds.insert(neighborhoodId);
+            showStatus("Neighborhood access granted.");
+        });
+    }
+
+    void revokeNeighborhoodAccess()
+    {
+        runAction([this] {
+            requireFullAccess();
+            const QString username = m_adminAccessInput->currentData().toString();
+            const QString neighborhoodId = m_neighborhoodAccessInput->currentData().toString();
+            if (!m_adminProfiles.contains(username) || findNeighborhood(neighborhoodId) == nullptr) {
+                throw DomainError("Choose a valid admin and neighborhood.");
+            }
+            if (m_adminProfiles[username].fullAccess) {
+                throw DomainError("Global administrator access cannot be scoped.");
+            }
+            m_adminProfiles[username].neighborhoodIds.remove(neighborhoodId);
+            showStatus("Neighborhood access revoked.");
+        });
+    }
+
+    void requireFullAccess() const
+    {
+        if (!currentAdminHasFullAccess()) {
+            throw DomainError("Only full-access administrators can manage neighborhoods and admin permissions.");
+        }
+    }
+
+    void runAction(const std::function<void()> &action)
+    {
+        try {
+            action();
+            refreshAll();
+        } catch (const DomainError &error) {
+            setStudentPanelMessage(error.what(), true);
+            QMessageBox::warning(this, "Rule feedback", error.what());
+        }
+    }
+
+    void refreshAll()
+    {
+        refreshMetrics();
+        refreshRoomMatrix();
+        refreshTodayMenuSummary();
+        refreshStudents();
+        refreshResidentCards();
+        refreshCombos();
+        refreshMenuCards();
+        refreshNeighborhoods();
+    }
+
+    void refreshNeighborhoods()
+    {
+        if (m_neighborhoodTable == nullptr) {
+            return;
+        }
+
+        m_neighborhoodTable->setRowCount(0);
+        for (const Neighborhood &neighborhood : m_neighborhoods) {
+            if (!currentAdminCanAccessNeighborhood(neighborhood.id)) {
+                continue;
+            }
+
+            QStringList adminNames;
+            for (const AdminProfile &profile : m_adminProfiles) {
+                if (profile.fullAccess || profile.neighborhoodIds.contains(neighborhood.id)) {
+                    adminNames.append(profile.displayName);
+                }
+            }
+            adminNames.sort();
+
+            const int row = m_neighborhoodTable->rowCount();
+            m_neighborhoodTable->insertRow(row);
+            setCell(m_neighborhoodTable, row, 0, neighborhood.id, "#13231D");
+            setCell(m_neighborhoodTable, row, 1, neighborhood.name, "#13231D");
+            setCell(m_neighborhoodTable, row, 2, neighborhood.dormitoryIds.join(", "), "#667085");
+            setCell(m_neighborhoodTable, row, 3, adminNames.join(", "), "#1D7A57");
+        }
+
+        const QString selectedCopy = m_copyNeighborhoodInput->currentData().toString();
+        const QString selectedAdmin = m_adminAccessInput->currentData().toString();
+        const QString selectedAccessNeighborhood = m_neighborhoodAccessInput->currentData().toString();
+
+        m_copyNeighborhoodInput->clear();
+        m_neighborhoodAccessInput->clear();
+        for (const Neighborhood &neighborhood : m_neighborhoods) {
+            if (currentAdminCanAccessNeighborhood(neighborhood.id)) {
+                const QString labelText = neighborhood.id + " - " + neighborhood.name;
+                m_copyNeighborhoodInput->addItem(labelText, neighborhood.id);
+                m_neighborhoodAccessInput->addItem(labelText, neighborhood.id);
+            }
+        }
+
+        m_adminAccessInput->clear();
+        for (const AdminProfile &profile : m_adminProfiles) {
+            m_adminAccessInput->addItem(profile.username + " - " + profile.displayName, profile.username);
+        }
+        selectComboData(m_copyNeighborhoodInput, selectedCopy);
+        selectComboData(m_adminAccessInput, selectedAdmin);
+        selectComboData(m_neighborhoodAccessInput, selectedAccessNeighborhood);
+
+        const bool canManage = currentAdminHasFullAccess();
+        m_neighborhoodIdInput->setEnabled(canManage);
+        m_neighborhoodNameInput->setEnabled(canManage);
+        m_copyNeighborhoodInput->setEnabled(canManage);
+        m_adminAccessInput->setEnabled(canManage);
+        m_neighborhoodAccessInput->setEnabled(canManage);
+    }
+
+    void refreshTodayMenuSummary()
+    {
+        clearLayout(m_todayMenuSummary);
+        const QDate today = QDate::currentDate();
+        for (const Dormitory &dormitory : visibleDormitories()) {
+            const auto menu = dormitory.restaurant().menuForDate(today);
+            auto *item = new QFrame(this);
+            item->setObjectName("todayMenuItem");
+            item->setStyleSheet("QFrame#todayMenuItem { background: #F3FBF7; border: 1px solid #D6E3DC; border-radius: 12px; }");
+            auto *layout = new QVBoxLayout(item);
+            layout->setContentsMargins(12, 10, 12, 10);
+            layout->setSpacing(4);
+            layout->addWidget(classLabel(dormitory.name(), "cardTitle"));
+            if (menu.has_value()) {
+                layout->addWidget(classLabel("Lunch: " + menu->lunch, "muted"));
+                layout->addWidget(classLabel("Dinner: " + menu->dinner, "muted"));
+            } else {
+                layout->addWidget(classLabel("No menu set for today", "muted"));
+            }
+            m_todayMenuSummary->addWidget(item);
+        }
+    }
+
+    void refreshMetrics()
+    {
+        int totalStudents = 0;
+        int openBeds = 0;
+        int mealsToday = 0;
+        const QDate today = QDate::currentDate();
+
+        totalStudents = visibleStudents().size();
+        for (const Dormitory &dormitory : visibleDormitories()) {
+            for (const Room &room : dormitory.rooms()) {
+                openBeds += room.capacity() - room.occupancy();
+            }
+            mealsToday += dormitory.restaurant().mealsServedOn(today);
+        }
+
+        m_residentsMetric->setText(QString::number(totalStudents));
+        m_availableRoomsMetric->setText(QString::number(openBeds));
+        m_mealsMetric->setText(QString::number(mealsToday));
+    }
+
+    void refreshRoomMatrix()
+    {
+        m_roomMatrix->setRowCount(0);
+        for (const Dormitory &dormitory : visibleDormitories()) {
+            for (const Room &room : dormitory.rooms()) {
+                const int row = m_roomMatrix->rowCount();
+                m_roomMatrix->insertRow(row);
+                setCell(m_roomMatrix, row, 0, dormitory.name(), "#13231D");
+                setCell(m_roomMatrix, row, 1, QString::number(room.number()), "#13231D");
+                setCell(m_roomMatrix, row, 2, QString("%1 / %2").arg(room.occupancy()).arg(room.capacity()), "#667085");
+                setCell(m_roomMatrix, row, 3, room.studentIds().isEmpty() ? "-" : room.studentIds().join(", "), "#13231D");
+                const bool full = room.isFull();
+                setCell(m_roomMatrix, row, 4, full ? "Full" : "Available", full ? "#B42318" : "#1D7A57");
+            }
+        }
+        m_roomMatrix->resizeColumnsToContents();
+    }
+
+    void refreshStudents()
+    {
+        if (m_studentTable == nullptr) {
+            return;
+        }
+        m_studentTable->setRowCount(0);
+        const QString query = m_studentSearchInput == nullptr ? QString() : m_studentSearchInput->text().trimmed().toLower();
+        const QString filter = m_studentFilterInput == nullptr ? QStringLiteral("all") : m_studentFilterInput->currentData().toString();
+        int visibleCount = 0;
+        for (const Student &student : visibleStudents()) {
+            if (!query.isEmpty()
+                && !student.id().toLower().contains(query)
+                && !student.fullName().toLower().contains(query)) {
+                continue;
+            }
+            if (filter == "assigned" && !student.isAssigned()) {
+                continue;
+            }
+            if (filter == "unassigned" && student.isAssigned()) {
+                continue;
+            }
+            const int row = m_studentTable->rowCount();
+            m_studentTable->insertRow(row);
+            setCell(m_studentTable, row, 0, student.id(), "#13231D");
+            setCell(m_studentTable, row, 1, student.fullName(), "#13231D");
+            setCell(m_studentTable, row, 2, QString::number(student.academicYear()), "#667085");
+            setCell(m_studentTable, row, 3, assignmentText(student), student.isAssigned() ? "#1D7A57" : "#B7791F");
+            ++visibleCount;
+        }
+        if (m_studentCountLabel != nullptr) {
+            m_studentCountLabel->setText(QString::number(visibleCount) + " visible");
+        }
+        m_studentTable->resizeColumnsToContents();
+        selectStudentRow(m_selectedStudentId);
+        if ((m_selectedStudentId.isEmpty() || m_studentTable->selectedItems().isEmpty()) && m_studentTable->rowCount() > 0) {
+            m_studentTable->selectRow(0);
+        }
+        if (m_studentTable->rowCount() == 0) {
+            m_selectedStudentId.clear();
+        }
+        updateSelectedStudentProfile();
+    }
+
+    void refreshResidentCards()
+    {
+        if (m_residentList == nullptr) {
+            return;
+        }
+        clearLayout(m_residentList);
+        int index = 0;
+        for (const Student &student : visibleStudents()) {
+            auto *item = card(this);
+            auto *layout = new QHBoxLayout(item);
+            layout->setContentsMargins(14, 12, 14, 12);
+            layout->setSpacing(12);
+            layout->addWidget(statusPill(initials(student.fullName()), "#E6F4EE", "#123D32"));
+            auto *info = new QVBoxLayout();
+            info->setSpacing(3);
+            info->addWidget(classLabel(student.fullName(), "cardTitle"));
+            info->addWidget(classLabel(student.id() + " - Academic year " + QString::number(student.academicYear()), "muted"));
+            info->addWidget(classLabel(assignmentText(student), "muted"));
+            layout->addLayout(info, 1);
+            layout->addWidget(statusPill(student.isAssigned() ? "Resident" : "Unassigned", student.isAssigned() ? "#E6F4EE" : "#FFF7E6", student.isAssigned() ? "#1D7A57" : "#B7791F"));
+            m_residentList->addWidget(item, index / 2, index % 2);
+            ++index;
+        }
+    }
+
+    void refreshCombos()
+    {
+        const QString selectedStudent = m_assignStudentInput == nullptr ? QString() : m_assignStudentInput->currentData().toString();
+        const QString selectedDormitory = m_assignDormitoryInput == nullptr ? QString() : m_assignDormitoryInput->currentData().toString();
+        const QString selectedMenuDormitory = m_menuDormitoryInput == nullptr ? QString() : m_menuDormitoryInput->currentData().toString();
+
+        if (m_assignStudentInput != nullptr) {
+            m_assignStudentInput->clear();
+            for (const Student &student : visibleStudents()) {
+                m_assignStudentInput->addItem(student.id() + " - " + student.fullName(), student.id());
+            }
+            selectComboData(m_assignStudentInput, selectedStudent);
+        }
+
+        if (m_assignDormitoryInput != nullptr) {
+            m_assignDormitoryInput->clear();
+        }
+        if (m_menuDormitoryInput != nullptr) {
+            m_menuDormitoryInput->clear();
+        }
+        for (const Dormitory &dormitory : visibleDormitories()) {
+            const QString labelText = dormitory.id() + " - " + dormitory.name();
+            if (m_assignDormitoryInput != nullptr) {
+                m_assignDormitoryInput->addItem(labelText, dormitory.id());
+            }
+            if (m_menuDormitoryInput != nullptr) {
+                m_menuDormitoryInput->addItem(labelText, dormitory.id());
+            }
+        }
+        if (m_assignDormitoryInput != nullptr) {
+            selectComboData(m_assignDormitoryInput, selectedDormitory);
+        }
+        if (m_menuDormitoryInput != nullptr) {
+            selectComboData(m_menuDormitoryInput, selectedMenuDormitory);
+        }
+        updateSuggestedRoomNumber();
+    }
+
+    void updateSuggestedRoomNumber()
+    {
+        if (m_assignDormitoryInput == nullptr || m_assignRoomInput == nullptr) {
+            return;
+        }
+        const QString dormitoryId = m_assignDormitoryInput->currentData().toString();
+        if (dormitoryId.isEmpty()) {
+            return;
+        }
+        const QVector<Room> rooms = m_university.dormitory(dormitoryId).availableRooms();
+        if (!rooms.isEmpty()) {
+            m_assignRoomInput->setValue(rooms.first().number());
+        }
+    }
+
+    void refreshMenuCards()
+    {
+        if (m_menuCards == nullptr || m_menuDateInput == nullptr) {
+            return;
+        }
+        clearLayout(m_menuCards);
+        const QDate date = m_menuDateInput->date();
+
+        for (const Dormitory &dormitory : visibleDormitories()) {
+            auto *item = card(this);
+            auto *layout = new QVBoxLayout(item);
+            layout->setContentsMargins(18, 16, 18, 16);
+            layout->setSpacing(12);
+            auto *top = new QHBoxLayout();
+            top->addWidget(classLabel(dormitory.restaurant().name(), "cardTitle"));
+            top->addStretch();
+            top->addWidget(statusPill(dormitory.id(), "#E6F4EE", "#1D7A57"));
+            layout->addLayout(top);
+            layout->addWidget(classLabel(dormitory.name() + " - " + date.toString("yyyy-MM-dd"), "muted"));
+
+            const auto menu = dormitory.restaurant().menuForDate(date);
+            if (menu.has_value()) {
+                layout->addWidget(mealRow("Breakfast", menu->breakfast));
+                layout->addWidget(mealRow("Lunch", menu->lunch));
+                layout->addWidget(mealRow("Dinner", menu->dinner));
+            } else {
+                layout->addWidget(statusPill("No menu for selected date", "#FFF7E6", "#B7791F"));
+            }
+            m_menuCards->addWidget(item);
+        }
+        m_menuCards->addStretch();
+    }
+
+    void selectStudentFromTable()
+    {
+        if (m_studentTable == nullptr || m_studentTable->selectedItems().isEmpty()) {
+            return;
+        }
+        const int row = m_studentTable->currentRow();
+        if (row < 0) {
+            return;
+        }
+        m_selectedStudentId = m_studentTable->item(row, 0)->text();
+        updateSelectedStudentProfile();
+    }
+
+    void selectStudentRow(const QString &studentId)
+    {
+        if (m_studentTable == nullptr || studentId.isEmpty()) {
+            return;
+        }
+        m_studentTable->clearSelection();
+        for (int row = 0; row < m_studentTable->rowCount(); ++row) {
+            if (m_studentTable->item(row, 0)->text() == studentId) {
+                m_studentTable->selectRow(row);
+                return;
+            }
+        }
+    }
+
+    Student &selectedStudent()
+    {
+        if (m_selectedStudentId.isEmpty() || !m_university.hasStudent(m_selectedStudentId)) {
+            throw DomainError("Select a student first.");
+        }
+        return m_university.student(m_selectedStudentId);
+    }
+
+    void updateSelectedStudentProfile()
+    {
+        if (m_profileNameLabel == nullptr) {
+            return;
+        }
+
+        if (m_selectedStudentId.isEmpty() || !m_university.hasStudent(m_selectedStudentId)) {
+            m_profileNameLabel->setText("No student selected");
+            m_profileMetaLabel->setText("Search for a student by name or ID.");
+            m_profileAssignmentLabel->setText("Assignment will appear here.");
+            m_profileRoomLabel->setText("Room details will appear here.");
+            m_profileAccessLabel->setText("Access scope will appear here.");
+            m_profileNameInput->clear();
+            m_profileYearInput->setValue(1);
+            setProfileControlsEnabled(false);
+            return;
+        }
+
+        const Student &student = m_university.student(m_selectedStudentId);
+        m_profileNameLabel->setText(student.fullName());
+        m_profileMetaLabel->setText(student.id() + " - Academic year " + QString::number(student.academicYear()));
+        m_profileAssignmentLabel->setText(assignmentText(student));
+        m_profileRoomLabel->setText(roomDetailText(student));
+        m_profileAccessLabel->setText(accessDetailText(student));
+        m_profileNameInput->setText(student.fullName());
+        m_profileYearInput->setValue(student.academicYear());
+        setProfileControlsEnabled(true);
+    }
+
+    void setProfileControlsEnabled(bool enabled)
+    {
+        m_profileNameInput->setEnabled(enabled);
+        m_profileYearInput->setEnabled(enabled);
+        if (m_assignDormitoryInput != nullptr) {
+            m_assignDormitoryInput->setEnabled(enabled);
+        }
+        if (m_assignRoomInput != nullptr) {
+            m_assignRoomInput->setEnabled(enabled);
+        }
+    }
+
+    QString roomDetailText(const Student &student) const
+    {
+        if (!student.isAssigned()) {
+            return "No accommodation assigned yet.";
+        }
+
+        const Dormitory &dormitory = m_university.dormitory(student.dormitoryId().value());
+        const Room &room = dormitory.room(student.roomNumber().value());
+        return dormitory.name() + " - room capacity "
+            + QString::number(room.occupancy()) + " / " + QString::number(room.capacity());
+    }
+
+    QString accessDetailText(const Student &student) const
+    {
+        if (!student.isAssigned()) {
+            return "Visible because this student is unassigned.";
+        }
+
+        const QString dormitoryId = student.dormitoryId().value();
+        const Neighborhood *neighborhood = findNeighborhoodForDormitory(dormitoryId);
+        const QString neighborhoodText = neighborhood == nullptr
+            ? "No neighborhood"
+            : neighborhood->id + " - " + neighborhood->name;
+        return "Scope: " + neighborhoodText + (currentAdminCanAccessDormitory(dormitoryId) ? " (editable)" : " (view only)");
+    }
+
+    const Neighborhood *findNeighborhoodForDormitory(const QString &dormitoryId) const
+    {
+        for (const Neighborhood &neighborhood : m_neighborhoods) {
+            if (neighborhood.dormitoryIds.contains(dormitoryId)) {
+                return &neighborhood;
+            }
+        }
+        return nullptr;
+    }
+
+    QString nextStudentId() const
+    {
+        int maxNumber = 1000;
+        for (const Student &student : m_university.students()) {
+            const QString id = student.id();
+            if (id.size() > 1 && id.startsWith('S')) {
+                bool ok = false;
+                const int number = id.mid(1).toInt(&ok);
+                if (ok) {
+                    maxNumber = std::max(maxNumber, number);
+                }
+            }
+        }
+        return "S" + QString::number(maxNumber + 1);
+    }
+
+    void setStudentPanelMessage(const QString &message, bool error = false)
+    {
+        showStatus(message);
+        if (m_profileStatusLabel == nullptr) {
+            return;
+        }
+        m_profileStatusLabel->setText(message);
+        m_profileStatusLabel->setStyleSheet(error ? "color: #B42318;" : "color: #1D7A57;");
+    }
+
+    QWidget *mealRow(const QString &meal, const QString &description)
+    {
+        auto *row = new QFrame(this);
+        row->setObjectName("mealRow");
+        row->setStyleSheet("QFrame#mealRow { background: #F3FBF7; border: 1px solid #D6E3DC; border-radius: 12px; }");
+        auto *layout = new QHBoxLayout(row);
+        layout->setContentsMargins(12, 10, 12, 10);
+        layout->setSpacing(12);
+        layout->addWidget(statusPill(meal.left(1), "#E6F4EE", "#1D7A57"));
+        auto *textLayout = new QVBoxLayout();
+        textLayout->setSpacing(2);
+        textLayout->addWidget(classLabel(meal, "muted"));
+        textLayout->addWidget(classLabel(description.isEmpty() ? "Not set" : description, "cardTitle"));
+        layout->addLayout(textLayout, 1);
+        return row;
+    }
+
+    void setCell(QTableWidget *table, int row, int column, const QString &value, const QString &color)
+    {
+        auto *item = new QTableWidgetItem(value);
+        item->setForeground(QColor(color));
+        table->setItem(row, column, item);
+    }
+
+    void showStatus(const QString &message)
+    {
+        if (!message.isEmpty()) {
+            setToolTip(message);
+        }
+    }
+
+    static QString initials(const QString &name)
+    {
+        QString result;
+        for (const QString &part : name.split(' ', Qt::SkipEmptyParts)) {
+            result += part.left(1).toUpper();
+            if (result.size() == 2) {
+                break;
+            }
+        }
+        return result.isEmpty() ? "ST" : result;
+    }
+
+    static void selectComboData(QComboBox *combo, const QString &value)
+    {
+        const int index = combo->findData(value);
+        if (index >= 0) {
+            combo->setCurrentIndex(index);
+        }
+    }
+
+    static void clearLayout(QLayout *layout)
+    {
+        while (QLayoutItem *item = layout->takeAt(0)) {
+            if (QWidget *widget = item->widget()) {
+                widget->deleteLater();
+            }
+            if (QLayout *childLayout = item->layout()) {
+                clearLayout(childLayout);
+            }
+            delete item;
+        }
+    }
+};
+
+int main(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
+    DormitoryWindow window;
+    const int adminLoginIndex = QCoreApplication::arguments().indexOf("--login-admin");
+    if (adminLoginIndex >= 0) {
+        window.loginAsAdminForTest(QCoreApplication::arguments().value(adminLoginIndex + 1, "admin"));
+    }
+    const int studentLoginIndex = QCoreApplication::arguments().indexOf("--login-student");
+    if (studentLoginIndex >= 0) {
+        window.loginAsStudentForTest(QCoreApplication::arguments().value(studentLoginIndex + 1, "S1001").toUpper());
+    }
+    const int pageIndex = QCoreApplication::arguments().indexOf("--page");
+    if (pageIndex >= 0) {
+        window.showPageForTest(QCoreApplication::arguments().value(pageIndex + 1, "0").toInt());
+    }
+    if (QCoreApplication::arguments().contains("--smoke-test")) {
+        return 0;
+    }
+    const int screenshotIndex = QCoreApplication::arguments().indexOf("--screenshot");
+    if (screenshotIndex >= 0) {
+        const QString path = QCoreApplication::arguments().value(screenshotIndex + 1, "udrms-gui.png");
+        window.show();
+        app.processEvents();
+        window.grab().save(path);
+        return 0;
+    }
+    window.show();
+    return app.exec();
+}

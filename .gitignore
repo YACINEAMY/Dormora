@@ -1,0 +1,4 @@
+build/
+sample-university-data.json
+*.user
+*.autosave

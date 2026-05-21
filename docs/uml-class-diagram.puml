@@ -1,0 +1,80 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Person {
+  - QString id
+  - QString fullName
+  + toJson() QJsonObject
+}
+
+class Student {
+  - int academicYear
+  - optional<QString> dormitoryId
+  - optional<int> roomNumber
+  + assignToRoom(dormitoryId, roomNumber)
+  + clearAssignment()
+}
+
+class Room {
+  - int number
+  - int capacity
+  - QSet<QString> studentIds
+  + addStudent(studentId)
+  + removeStudent(studentId)
+  + isFull() bool
+}
+
+class DailyMenu {
+  + QString breakfast
+  + QString lunch
+  + QString dinner
+}
+
+class Restaurant {
+  - QString name
+  - QMap<QDate, DailyMenu> menus
+  - QHash<QDate, int> mealsServed
+  + setMenu(date, menu)
+  + recordMealServed(date, count)
+}
+
+class Dormitory {
+  - QString id
+  - QString name
+  - int capacity
+  - QHash<int, Room> rooms
+  - Restaurant restaurant
+  + addRoom(room)
+  + assignStudent(student, roomNumber)
+  + removeStudent(student)
+}
+
+class University {
+  - QHash<QString, Student> students
+  - QHash<QString, Dormitory> dormitories
+  + addStudent(student)
+  + addDormitory(dormitory)
+  + assignStudentToRoom(studentId, dormitoryId, roomNumber)
+  + restaurantMenuForStudent(studentId, date)
+}
+
+class JsonStorage {
+  + saveUniversity(university, filePath)
+  + loadUniversity(filePath) University
+}
+
+class DomainError
+
+Person <|-- Student
+Dormitory *-- Restaurant
+Dormitory *-- Room
+Restaurant *-- DailyMenu
+University o-- Student
+University o-- Dormitory
+JsonStorage ..> University
+DomainError ..> University
+DomainError ..> Dormitory
+DomainError ..> Room
+DomainError ..> Restaurant
+
+@enduml
