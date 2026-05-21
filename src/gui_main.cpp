@@ -97,6 +97,14 @@ QPushButton#windowButton:hover {
 QPushButton#closeButton {
     background: rgba(180,35,24,0.10);
     color: #B42318;
+    border: none;
+    border-radius: 13px;
+    min-width: 26px;
+    max-width: 26px;
+    min-height: 26px;
+    max-height: 26px;
+    padding: 0;
+    font-weight: 800;
 }
 QPushButton#closeButton:hover {
     background: #B42318;
@@ -152,7 +160,7 @@ QFrame#brandMiniLine {
 QLabel#loginBadge {
     background: rgba(255,255,255,0.12);
     border: 1px solid rgba(255,255,255,0.20);
-    border-radius: 13px;
+    border-radius: 14px;
     color: #E8FFF3;
     font-size: 12px;
     font-weight: 700;
@@ -162,8 +170,8 @@ QPushButton[nav="true"] {
     background: transparent;
     color: #D9F2E4;
     border: none;
-    border-radius: 10px;
-    padding: 11px 14px;
+    border-radius: 8px;
+    padding: 12px 14px;
     text-align: left;
     font-weight: 600;
 }
@@ -175,21 +183,26 @@ QPushButton[nav="true"]:hover {
     background: rgba(255,255,255,0.10);
 }
 QLabel#pageTitle {
-    font-size: 28px;
+    font-size: 26px;
     font-weight: 800;
 }
 QLabel#pageKicker {
-    color: #667085;
+    color: #536579;
     font-size: 14px;
 }
 QFrame.card, QFrame[class="card"], QGroupBox {
     background: white;
-    border: 1px solid #D6E3DC;
+    border: 1px solid #D9E5DF;
     border-radius: 8px;
 }
 QFrame#studentCard {
     background: #FFFFFF;
-    border: 1px solid #E8DCC7;
+    border: 1px solid #D9E5DF;
+    border-radius: 8px;
+}
+QFrame#studentInlinePanel, QFrame#todayMenuItem, QFrame#mealRow {
+    background: #F7FAF8;
+    border: 1px solid #D9E5DF;
     border-radius: 8px;
 }
 QLabel.cardTitle, QLabel[class="cardTitle"] {
@@ -200,20 +213,20 @@ QLabel.muted, QLabel[class="muted"] {
     color: #667085;
 }
 QLabel.metricValue, QLabel[class="metricValue"] {
-    font-size: 36px;
+    font-size: 32px;
     font-weight: 800;
     color: #13231D;
 }
 QLabel.metricLabel, QLabel[class="metricLabel"] {
-    color: #667085;
+    color: #536579;
     font-weight: 700;
 }
 QPushButton {
     background: white;
-    border: 1px solid #D6E3DC;
-    border-radius: 10px;
-    padding: 10px 14px;
-    font-weight: 700;
+    border: 1px solid #D4E1DA;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-weight: 650;
 }
 QPushButton:hover {
     background: #F3FBF7;
@@ -230,31 +243,66 @@ QPushButton.danger, QPushButton[class="danger"] {
     color: #B42318;
     border-color: #F1B8B3;
 }
+QPushButton:disabled, QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled {
+    color: #98A2B3;
+    background: #F2F5F3;
+    border-color: #E2E8E4;
+}
+QPushButton:focus, QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDateEdit:focus {
+    border: 1px solid #1D7A57;
+}
 QLineEdit, QComboBox, QSpinBox, QDateEdit {
     background: white;
-    border: 1px solid #D6E3DC;
-    border-radius: 10px;
+    border: 1px solid #D4E1DA;
+    border-radius: 8px;
     padding: 8px 12px;
-    min-height: 28px;
-}
-QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDateEdit:focus {
-    border: 1px solid #1D7A57;
+    min-height: 30px;
 }
 QTableWidget {
     background: white;
-    border: 1px solid #D6E3DC;
-    border-radius: 12px;
-    gridline-color: #E5EDE8;
-    selection-background-color: #E6F4EE;
+    border: 1px solid #D9E5DF;
+    border-radius: 8px;
+    gridline-color: transparent;
+    selection-background-color: #E2F3EA;
     selection-color: #13231D;
+    outline: 0;
+}
+QTableWidget::item {
+    padding: 8px 10px;
+    border-bottom: 1px solid #EEF3F0;
+}
+QTableWidget::item:selected {
+    background: #E2F3EA;
 }
 QHeaderView::section {
-    background: #F1F8F4;
-    color: #667085;
+    background: #F3F8F5;
+    color: #536579;
     border: none;
-    border-bottom: 1px solid #D6E3DC;
+    border-bottom: 1px solid #D9E5DF;
     padding: 10px;
     font-weight: 700;
+}
+QScrollArea {
+    background: transparent;
+    border: none;
+}
+QScrollArea > QWidget > QWidget {
+    background: transparent;
+}
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+}
+QScrollBar::handle:vertical {
+    background: #C7D8CF;
+    border-radius: 5px;
+    min-height: 32px;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+    background: transparent;
 }
 QStatusBar {
     background: #F7FAF8;
@@ -692,16 +740,16 @@ private:
         brandPanel->setObjectName("loginBrand");
         brandPanel->setFixedWidth(430);
         auto *brandLayout = new QVBoxLayout(brandPanel);
-        brandLayout->setContentsMargins(42, 44, 42, 42);
-        brandLayout->setSpacing(14);
+        brandLayout->setContentsMargins(42, 44, 42, 46);
+        brandLayout->setSpacing(12);
         brandLayout->addWidget(buildBrandLockup(brandPanel, "Campus living, organized."));
-        brandLayout->addSpacing(28);
-        brandLayout->addWidget(label("Dorms, rooms, and meals in one calm workspace.", "loginBadge", brandPanel), 0, Qt::AlignLeft);
-        brandLayout->addSpacing(14);
+        brandLayout->addSpacing(34);
+        brandLayout->addWidget(label("Operations console", "loginBadge", brandPanel), 0, Qt::AlignLeft);
+        brandLayout->addSpacing(18);
         auto *headline = label("Campus housing starts with Dormora.", "brand", brandPanel);
         headline->setStyleSheet("QLabel#brand { font-size: 34px; line-height: 42px; }");
         brandLayout->addWidget(headline);
-        auto *sub = label("Sign in once and Dormora opens the right workspace for housing staff or residents.", "brandSub", brandPanel);
+        auto *sub = label("One calm workspace for rooms, meals, and resident records.", "brandSub", brandPanel);
         sub->setStyleSheet("QLabel#brandSub { font-size: 14px; line-height: 21px; }");
         brandLayout->addWidget(sub);
         brandLayout->addStretch();
@@ -710,17 +758,17 @@ private:
         auto *content = new QWidget(root);
         content->setObjectName("contentPane");
         auto *contentLayout = new QVBoxLayout(content);
-        contentLayout->setContentsMargins(90, 26, 90, 70);
-        contentLayout->setSpacing(20);
+        contentLayout->setContentsMargins(72, 26, 72, 64);
+        contentLayout->setSpacing(18);
         contentLayout->addWidget(buildWindowControls(), 0, Qt::AlignRight);
-        contentLayout->addStretch();
+        contentLayout->addStretch(1);
 
         auto *loginCard = card(content);
-        loginCard->setMinimumWidth(500);
-        loginCard->setMaximumWidth(560);
+        loginCard->setMinimumWidth(480);
+        loginCard->setMaximumWidth(540);
         auto *loginLayout = new QVBoxLayout(loginCard);
-        loginLayout->setContentsMargins(34, 32, 34, 34);
-        loginLayout->setSpacing(18);
+        loginLayout->setContentsMargins(34, 30, 34, 30);
+        loginLayout->setSpacing(16);
         loginLayout->addWidget(label("Sign in to Dormora", "pageTitle", loginCard));
         loginLayout->addWidget(label("Use staff credentials for the management console, or a student ID for the resident portal.", "pageKicker", loginCard));
 
@@ -732,7 +780,9 @@ private:
         m_loginPasswordInput->setEchoMode(QLineEdit::Password);
         m_loginPasswordInput->setMinimumHeight(44);
         loginLayout->addWidget(fieldLabel("Username / Student ID", m_loginUserInput));
+        loginLayout->addSpacing(2);
         loginLayout->addWidget(fieldLabel("Password", m_loginPasswordInput));
+        loginLayout->addSpacing(4);
 
         auto *button = new QPushButton("Continue to workspace", loginCard);
         button->setMinimumHeight(44);
@@ -747,7 +797,7 @@ private:
         connect(m_loginUserInput, &QLineEdit::returnPressed, this, [this] { authenticate(); });
 
         contentLayout->addWidget(loginCard, 0, Qt::AlignHCenter);
-        contentLayout->addStretch();
+        contentLayout->addStretch(2);
         outer->addWidget(content, 1);
 
         setAppContent(root, true);
@@ -762,12 +812,10 @@ private:
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(8);
 
-        auto *minimize = new QPushButton("-", controls);
+        auto *minimize = new QPushButton(QString::fromUtf8("−"), controls);
         minimize->setObjectName("windowButton");
-        auto *close = new QPushButton("x", controls);
+        auto *close = new QPushButton(QString::fromUtf8("×"), controls);
         close->setObjectName("closeButton");
-        close->setProperty("id", "windowButton");
-        close->setStyleSheet("QPushButton#closeButton { background: rgba(180,35,24,0.10); color: #B42318; border: none; border-radius: 13px; min-width: 26px; max-width: 26px; min-height: 26px; max-height: 26px; padding: 0; font-weight: 800; } QPushButton#closeButton:hover { background: #B42318; color: white; }");
 
         connect(minimize, &QPushButton::clicked, this, [this] { showMinimized(); });
         connect(close, &QPushButton::clicked, this, [this] { this->close(); });
@@ -924,9 +972,9 @@ private:
 
         auto *layout = new QVBoxLayout(sidebar);
         layout->setContentsMargins(22, 28, 22, 22);
-        layout->setSpacing(10);
+        layout->setSpacing(11);
         layout->addWidget(buildBrandLockup(sidebar, "Campus living, organized."));
-        layout->addSpacing(18);
+        layout->addSpacing(22);
 
         auto *group = new QButtonGroup(sidebar);
         group->setExclusive(true);
@@ -936,7 +984,7 @@ private:
             auto *button = new QPushButton(items[i], sidebar);
             button->setProperty("nav", true);
             button->setCheckable(true);
-            button->setMinimumHeight(42);
+            button->setMinimumHeight(44);
             group->addButton(button, i);
             layout->addWidget(button);
             connect(button, &QPushButton::clicked, this, [this, i] { m_stack->setCurrentIndex(i); });
@@ -948,13 +996,13 @@ private:
         layout->addStretch();
         auto *logoutButton = new QPushButton("Log out", sidebar);
         logoutButton->setProperty("nav", true);
-        logoutButton->setMinimumHeight(42);
+        logoutButton->setMinimumHeight(44);
         connect(logoutButton, &QPushButton::clicked, this, [this] { logout(); });
         layout->addWidget(logoutButton);
-        auto *hint = label("Dormora Console\nLive campus data\nCompact Qt Widgets", "brandSub", sidebar);
+        auto *hint = label("Dormora Console\nCampus operations", "brandSub", sidebar);
         if (!m_currentAdminUsername.isEmpty()) {
             const AdminProfile profile = m_adminProfiles.value(m_currentAdminUsername);
-            hint->setText(profile.displayName + "\n" + (profile.fullAccess ? "Full access" : "Scoped access"));
+            hint->setText(profile.displayName + "\n" + (profile.fullAccess ? "Full access" : "Neighborhood access"));
         }
         layout->addWidget(hint);
         return sidebar;
@@ -973,14 +1021,14 @@ private:
         sidebar->setFixedWidth(238);
         auto *sideLayout = new QVBoxLayout(sidebar);
         sideLayout->setContentsMargins(22, 28, 22, 22);
-        sideLayout->setSpacing(10);
+        sideLayout->setSpacing(11);
         sideLayout->addWidget(buildBrandLockup(sidebar, "Resident portal"));
-        sideLayout->addSpacing(16);
-        sideLayout->addWidget(label("Campus living, organized.", "brandSub", sidebar));
+        sideLayout->addSpacing(22);
+        sideLayout->addWidget(label("Room status\nMeal access\nResident record", "brandSub", sidebar));
         sideLayout->addStretch();
         auto *logoutButton = new QPushButton("Log out", sidebar);
         logoutButton->setProperty("nav", true);
-        logoutButton->setMinimumHeight(42);
+        logoutButton->setMinimumHeight(44);
         connect(logoutButton, &QPushButton::clicked, this, [this] { logout(); });
         sideLayout->addWidget(logoutButton);
         rootLayout->addWidget(sidebar);
@@ -999,12 +1047,16 @@ private:
         menuCard->setObjectName("studentCard");
         auto *menuLayout = new QVBoxLayout(menuCard);
         menuLayout->setContentsMargins(20, 18, 20, 20);
-        menuLayout->setSpacing(14);
-        menuLayout->addWidget(classLabel("Restaurant Menu", "cardTitle"));
+        menuLayout->setSpacing(10);
+        auto *menuTop = new QHBoxLayout();
+        menuTop->addWidget(classLabel("Restaurant Menu", "cardTitle"));
+        menuTop->addStretch();
         if (student.isAssigned()) {
             const Dormitory &dormitory = m_university.dormitory(student.dormitoryId().value());
             const auto menu = dormitory.restaurant().menuForDate(QDate::currentDate());
-            menuLayout->addWidget(classLabel(dormitory.restaurant().name() + " - " + QDate::currentDate().toString("yyyy-MM-dd"), "muted"));
+            menuTop->addWidget(statusPill(QDate::currentDate().toString("MMM d"), "#E6F4EE", "#1D7A57"));
+            menuLayout->addLayout(menuTop);
+            menuLayout->addWidget(classLabel(dormitory.restaurant().name() + " - " + dormitory.name(), "muted"));
             if (menu.has_value()) {
                 menuLayout->addWidget(mealRow("Breakfast", menu->breakfast));
                 menuLayout->addWidget(mealRow("Lunch", menu->lunch));
@@ -1013,6 +1065,7 @@ private:
                 menuLayout->addWidget(statusPill("No menu for today", "#FFF7E6", "#B7791F"));
             }
         } else {
+            menuLayout->addLayout(menuTop);
             menuLayout->addWidget(statusPill("Restaurant access requires a room assignment", "#FFF7E6", "#B7791F"));
         }
         layout->addWidget(menuCard, 1);
@@ -1027,11 +1080,12 @@ private:
         box->setObjectName("studentCard");
         auto *layout = new QVBoxLayout(box);
         layout->setContentsMargins(20, 18, 20, 20);
-        layout->setSpacing(10);
-        layout->addWidget(statusPill(initials(student.fullName()), "#FFF3D8", "#7A4B00"));
+        layout->setSpacing(9);
+        layout->addWidget(statusPill(initials(student.fullName()), "#E6F4EE", "#123D32"), 0, Qt::AlignLeft);
         layout->addWidget(classLabel(student.fullName(), "cardTitle"));
         layout->addWidget(classLabel(student.id() + " - Academic year " + QString::number(student.academicYear()), "muted"));
-        layout->addWidget(statusPill(student.isAssigned() ? "Resident" : "Unassigned", student.isAssigned() ? "#E6F4EE" : "#FFF7E6", student.isAssigned() ? "#1D7A57" : "#B7791F"));
+        layout->addStretch();
+        layout->addWidget(statusPill(student.isAssigned() ? "Resident" : "Unassigned", student.isAssigned() ? "#E6F4EE" : "#FFF7E6", student.isAssigned() ? "#1D7A57" : "#B7791F"), 0, Qt::AlignLeft);
         return box;
     }
 
@@ -1041,7 +1095,7 @@ private:
         box->setObjectName("studentCard");
         auto *layout = new QVBoxLayout(box);
         layout->setContentsMargins(20, 18, 20, 20);
-        layout->setSpacing(10);
+        layout->setSpacing(9);
         layout->addWidget(classLabel("Accommodation", "cardTitle"));
         if (student.isAssigned()) {
             const Dormitory &dormitory = m_university.dormitory(student.dormitoryId().value());
@@ -1049,8 +1103,11 @@ private:
             layout->addWidget(classLabel(dormitory.name(), "cardTitle"));
             layout->addWidget(classLabel("Room " + QString::number(room.number()), "muted"));
             layout->addWidget(classLabel(QString("Occupancy %1 / %2").arg(room.occupancy()).arg(room.capacity()), "muted"));
+            layout->addStretch();
+            layout->addWidget(statusPill("Active assignment", "#E6F4EE", "#1D7A57"), 0, Qt::AlignLeft);
         } else {
             layout->addWidget(classLabel("No room assigned yet.", "muted"));
+            layout->addStretch();
         }
         return box;
     }
@@ -1069,8 +1126,8 @@ private:
 
         auto *main = new QHBoxLayout();
         main->setSpacing(18);
-        main->addWidget(buildRoomMatrixCard(), 2);
-        main->addWidget(buildTodayMenuSummaryCard(), 1);
+        main->addWidget(buildRoomMatrixCard(), 3);
+        main->addWidget(buildTodayMenuSummaryCard(), 2);
         layout->addLayout(main, 1);
 
         return page;
@@ -1083,8 +1140,8 @@ private:
 
         auto *split = new QHBoxLayout();
         split->setSpacing(18);
-        split->addWidget(buildStudentSearchCard(), 5);
-        split->addWidget(buildStudentProfileCard(), 4);
+        split->addWidget(buildStudentSearchCard(), 6);
+        split->addWidget(buildStudentProfileCard(), 5);
         layout->addLayout(split, 1);
 
         return page;
@@ -1194,7 +1251,7 @@ private:
         auto *grant = new QPushButton("Grant", box);
         grant->setProperty("class", "primary");
         auto *revoke = new QPushButton("Revoke", box);
-        revoke->setStyleSheet("QPushButton { color: #B42318; border-color: #F1B8B3; }");
+        revoke->setProperty("class", "danger");
         row->addWidget(grant);
         row->addWidget(revoke);
         layout->addLayout(row);
@@ -1213,25 +1270,29 @@ private:
         layout->setSpacing(18);
         auto *titleRow = new QHBoxLayout();
         titleRow->setSpacing(12);
-        titleRow->addWidget(label(title, "pageTitle", page));
-        titleRow->addWidget(statusPill(studentTone ? "Dormora resident" : "Dormora console",
-                                       studentTone ? "#FFF3D8" : "#E6F4EE",
-                                       studentTone ? "#7A4B00" : "#1D7A57"));
-        titleRow->addStretch();
+        titleRow->addWidget(label(title, "pageTitle", page), 1);
         titleRow->addWidget(buildWindowControls());
         layout->addLayout(titleRow);
-        layout->addWidget(label(subtitle, "pageKicker", page));
+        auto *subtitleRow = new QHBoxLayout();
+        subtitleRow->setSpacing(12);
+        subtitleRow->addWidget(label(subtitle, "pageKicker", page), 1);
+        subtitleRow->addWidget(statusPill(studentTone ? "Resident portal" : "Dormora console",
+                                          studentTone ? "#FFF7E6" : "#E6F4EE",
+                                          studentTone ? "#B7791F" : "#1D7A57"));
+        layout->addLayout(subtitleRow);
         return page;
     }
 
     QLabel *addMetric(QHBoxLayout *layout, const QString &name, const QString &value, const QString &description)
     {
         auto *box = card(this);
-        box->setMinimumHeight(126);
+        box->setMinimumHeight(118);
+        box->setMaximumHeight(132);
         auto *inner = new QVBoxLayout(box);
-        inner->setContentsMargins(18, 16, 18, 16);
-        inner->setSpacing(4);
+        inner->setContentsMargins(18, 14, 18, 14);
+        inner->setSpacing(3);
         auto *nameLabel = classLabel(name, "metricLabel");
+        nameLabel->setText(name.toUpper());
         auto *valueLabel = classLabel(value, "metricValue");
         inner->addWidget(nameLabel);
         inner->addWidget(valueLabel);
@@ -1269,9 +1330,9 @@ private:
         note->setWordWrap(true);
         layout->addWidget(note);
         m_todayMenuSummary = new QVBoxLayout();
-        m_todayMenuSummary->setSpacing(10);
+        m_todayMenuSummary->setSpacing(8);
         layout->addLayout(m_todayMenuSummary);
-        layout->addWidget(statusPill("resident-only access", "#E6F4EE", "#1D7A57"));
+        layout->addWidget(statusPill("resident-only access", "#E6F4EE", "#1D7A57"), 0, Qt::AlignLeft);
         layout->addStretch();
         return box;
     }
@@ -1307,11 +1368,11 @@ private:
 
         m_studentTable = new QTableWidget(box);
         setupTable(m_studentTable, {"ID", "Full Name", "Year", "Assignment"});
+        m_studentTable->setMinimumHeight(160);
         layout->addWidget(m_studentTable, 1);
 
         auto *addBox = new QFrame(box);
         addBox->setObjectName("studentInlinePanel");
-        addBox->setStyleSheet("QFrame#studentInlinePanel { background: #F3FBF7; border: 1px solid #D6E3DC; border-radius: 14px; }");
         auto *addLayout = new QVBoxLayout(addBox);
         addLayout->setContentsMargins(14, 12, 14, 14);
         addLayout->setSpacing(8);
@@ -1322,9 +1383,14 @@ private:
         m_studentNameInput->setPlaceholderText("Full name");
         m_academicYearInput = new QSpinBox(addBox);
         m_academicYearInput->setRange(1, 8);
-        addLayout->addWidget(fieldLabel("Student ID", m_studentIdInput));
-        addLayout->addWidget(fieldLabel("Full Name", m_studentNameInput));
-        addLayout->addWidget(fieldLabel("Academic Year", m_academicYearInput));
+        auto *addGrid = new QGridLayout();
+        addGrid->setContentsMargins(0, 0, 0, 0);
+        addGrid->setHorizontalSpacing(10);
+        addGrid->setVerticalSpacing(8);
+        addGrid->addWidget(fieldLabel("Student ID", m_studentIdInput), 0, 0);
+        addGrid->addWidget(fieldLabel("Academic Year", m_academicYearInput), 0, 1);
+        addGrid->addWidget(fieldLabel("Full Name", m_studentNameInput), 1, 0, 1, 2);
+        addLayout->addLayout(addGrid);
         auto *addButton = new QPushButton("Add student", addBox);
         addButton->setProperty("class", "primary");
         addButton->setObjectName("addStudentButton");
@@ -1347,19 +1413,17 @@ private:
         auto *box = card(this);
         box->setMinimumWidth(420);
         auto *layout = new QVBoxLayout(box);
-        layout->setContentsMargins(18, 16, 18, 18);
+        layout->setContentsMargins(20, 18, 20, 20);
         layout->setSpacing(10);
 
         layout->addWidget(classLabel("Student Profile", "cardTitle"));
         auto *scroll = new QScrollArea(box);
         scroll->setWidgetResizable(true);
         scroll->setFrameShape(QFrame::NoFrame);
-        scroll->setStyleSheet("QScrollArea { background: transparent; border: none; } QScrollArea > QWidget > QWidget { background: transparent; }");
         auto *content = new QWidget(scroll);
-        content->setStyleSheet("background: transparent;");
         auto *profileLayout = new QVBoxLayout(content);
-        profileLayout->setContentsMargins(0, 0, 0, 0);
-        profileLayout->setSpacing(8);
+        profileLayout->setContentsMargins(0, 0, 6, 0);
+        profileLayout->setSpacing(9);
 
         m_profileNameLabel = classLabel("No student selected", "cardTitle");
         m_profileMetaLabel = classLabel("Search for a student by name or ID.", "muted");
@@ -1382,15 +1446,15 @@ private:
         auto *save = new QPushButton("Save changes", box);
         save->setProperty("class", "primary");
         save->setMinimumHeight(40);
-        save->setStyleSheet("QPushButton { background: #1D7A57; border: 1px solid #1D7A57; border-radius: 10px; color: white; font-weight: 800; padding: 9px 14px; } QPushButton:hover { background: #176648; }");
         connect(save, &QPushButton::clicked, this, [this] { saveSelectedStudent(); });
         profileLayout->addWidget(save);
 
         auto *utilityRow = new QHBoxLayout();
+        utilityRow->setSpacing(8);
         auto *reset = new QPushButton("Reset edits", box);
         auto *duplicate = new QPushButton("Duplicate", box);
         auto *deleteButton = new QPushButton("Delete", box);
-        deleteButton->setStyleSheet("QPushButton { color: #B42318; border-color: #F1B8B3; }");
+        deleteButton->setProperty("class", "danger");
         utilityRow->addWidget(reset);
         utilityRow->addWidget(duplicate);
         utilityRow->addWidget(deleteButton);
@@ -1408,10 +1472,11 @@ private:
         profileLayout->addWidget(fieldLabel("Room Number", m_assignRoomInput));
 
         auto *actionRow = new QHBoxLayout();
+        actionRow->setSpacing(8);
         auto *assign = new QPushButton("Assign", box);
         assign->setProperty("class", "primary");
         auto *remove = new QPushButton("Remove", box);
-        remove->setStyleSheet("QPushButton { color: #B42318; border-color: #F1B8B3; }");
+        remove->setProperty("class", "danger");
         actionRow->addWidget(assign);
         actionRow->addWidget(remove);
         profileLayout->addLayout(actionRow);
@@ -1472,7 +1537,6 @@ private:
         assign->setProperty("class", "primary");
         auto *remove = new QPushButton("Remove", box);
         remove->setProperty("class", "danger");
-        remove->setStyleSheet("QPushButton { color: #B42318; border-color: #F1B8B3; }");
         row->addWidget(assign);
         row->addWidget(remove);
         layout->addLayout(row);
@@ -1537,6 +1601,7 @@ private:
     {
         auto *pill = new QLabel(text, this);
         pill->setAlignment(Qt::AlignCenter);
+        pill->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
         pill->setStyleSheet(QString("QLabel { background: %1; color: %2; border-radius: 12px; padding: 5px 10px; font-weight: 700; }")
                                 .arg(background, foreground));
         return pill;
@@ -1625,6 +1690,9 @@ private:
         table->setSelectionBehavior(QAbstractItemView::SelectRows);
         table->setSelectionMode(QAbstractItemView::SingleSelection);
         table->setShowGrid(false);
+        table->verticalHeader()->setDefaultSectionSize(42);
+        table->setFocusPolicy(Qt::NoFocus);
+        table->setWordWrap(false);
     }
 
     void addStudent()
@@ -1977,11 +2045,14 @@ private:
             const auto menu = dormitory.restaurant().menuForDate(today);
             auto *item = new QFrame(this);
             item->setObjectName("todayMenuItem");
-            item->setStyleSheet("QFrame#todayMenuItem { background: #F3FBF7; border: 1px solid #D6E3DC; border-radius: 12px; }");
             auto *layout = new QVBoxLayout(item);
             layout->setContentsMargins(12, 10, 12, 10);
-            layout->setSpacing(4);
-            layout->addWidget(classLabel(dormitory.name(), "cardTitle"));
+            layout->setSpacing(5);
+            auto *top = new QHBoxLayout();
+            top->addWidget(classLabel(dormitory.name(), "cardTitle"));
+            top->addStretch();
+            top->addWidget(statusPill(dormitory.id(), "#E6F4EE", "#1D7A57"));
+            layout->addLayout(top);
             if (menu.has_value()) {
                 layout->addWidget(classLabel("Lunch: " + menu->lunch, "muted"));
                 layout->addWidget(classLabel("Dinner: " + menu->dinner, "muted"));
@@ -2024,7 +2095,7 @@ private:
                 setCell(m_roomMatrix, row, 2, QString("%1 / %2").arg(room.occupancy()).arg(room.capacity()), "#667085");
                 setCell(m_roomMatrix, row, 3, room.studentIds().isEmpty() ? "-" : room.studentIds().join(", "), "#13231D");
                 const bool full = room.isFull();
-                setCell(m_roomMatrix, row, 4, full ? "Full" : "Available", full ? "#B42318" : "#1D7A57");
+                setStatusCell(m_roomMatrix, row, 4, full ? "Full" : "Available", full ? "#FDECEC" : "#E6F4EE", full ? "#B42318" : "#1D7A57");
             }
         }
         m_roomMatrix->resizeColumnsToContents();
@@ -2326,11 +2397,10 @@ private:
     {
         auto *row = new QFrame(this);
         row->setObjectName("mealRow");
-        row->setStyleSheet("QFrame#mealRow { background: #F3FBF7; border: 1px solid #D6E3DC; border-radius: 12px; }");
         auto *layout = new QHBoxLayout(row);
-        layout->setContentsMargins(12, 10, 12, 10);
-        layout->setSpacing(12);
-        layout->addWidget(statusPill(meal.left(1), "#E6F4EE", "#1D7A57"));
+        layout->setContentsMargins(12, 9, 12, 9);
+        layout->setSpacing(10);
+        layout->addWidget(statusPill(meal.left(1), "#E6F4EE", "#1D7A57"), 0, Qt::AlignTop);
         auto *textLayout = new QVBoxLayout();
         textLayout->setSpacing(2);
         textLayout->addWidget(classLabel(meal, "muted"));
@@ -2343,6 +2413,17 @@ private:
     {
         auto *item = new QTableWidgetItem(value);
         item->setForeground(QColor(color));
+        item->setToolTip(value);
+        table->setItem(row, column, item);
+    }
+
+    void setStatusCell(QTableWidget *table, int row, int column, const QString &value, const QString &background, const QString &foreground)
+    {
+        auto *item = new QTableWidgetItem(value);
+        item->setForeground(QColor(foreground));
+        item->setBackground(QColor(background));
+        item->setTextAlignment(Qt::AlignCenter);
+        item->setToolTip(value);
         table->setItem(row, column, item);
     }
 
