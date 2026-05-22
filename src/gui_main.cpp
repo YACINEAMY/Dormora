@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QButtonGroup>
 #include <QComboBox>
+#include <QCompleter>
 #include <QCoreApplication>
 #include <QDateEdit>
 #include <QDir>
@@ -29,8 +30,10 @@
 #include <QScreen>
 #include <QScrollArea>
 #include <QSet>
+#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStackedWidget>
+#include <QStringListModel>
 #include <QStatusBar>
 #include <QTableWidget>
 #include <QTimer>
@@ -548,12 +551,17 @@ private:
     QTableWidget *m_studentTable = nullptr;
     QLineEdit *m_studentSearchInput = nullptr;
     QComboBox *m_studentFilterInput = nullptr;
+    QComboBox *m_studentYearFilterInput = nullptr;
+    QComboBox *m_studentDormitoryFilterInput = nullptr;
+    QCompleter *m_studentSearchCompleter = nullptr;
+    QStringListModel *m_studentSearchModel = nullptr;
     QLabel *m_studentCountLabel = nullptr;
     QLabel *m_profileNameLabel = nullptr;
     QLabel *m_profileMetaLabel = nullptr;
     QLabel *m_profileAssignmentLabel = nullptr;
     QLabel *m_profileRoomLabel = nullptr;
     QLabel *m_profileAccessLabel = nullptr;
+    QLabel *m_profileResidentStatusLabel = nullptr;
     QLabel *m_profileStatusLabel = nullptr;
     QLineEdit *m_profileNameInput = nullptr;
     QSpinBox *m_profileYearInput = nullptr;
@@ -580,6 +588,9 @@ private:
     QComboBox *m_adminAccessInput = nullptr;
     QComboBox *m_neighborhoodAccessInput = nullptr;
     QString m_selectedStudentId;
+    bool m_studentProfileDirty = false;
+    bool m_restoringStudentSelection = false;
+    bool m_loadingStudentProfile = false;
 
     void loadOrSeedData()
     {
@@ -1223,8 +1234,8 @@ private:
     {
         auto *box = card(this);
         auto *layout = new QVBoxLayout(box);
-        layout->setContentsMargins(18, 14, 18, 14);
-        layout->setSpacing(8);
+        layout->setContentsMargins(16, 12, 16, 12);
+        layout->setSpacing(6);
         layout->addWidget(classLabel("Add / Copy Neighborhood", "cardTitle"));
 
         m_neighborhoodIdInput = new QLineEdit(box);
@@ -1368,8 +1379,14 @@ private:
         layout->addLayout(top);
 
         m_studentSearchInput = new QLineEdit(box);
-        m_studentSearchInput->setPlaceholderText("Search by name or student ID");
+        m_studentSearchInput->setPlaceholderText("Search by name, student ID, or choose a suggestion");
         m_studentSearchInput->setMinimumHeight(38);
+        m_studentSearchModel = new QStringListModel(this);
+        m_studentSearchCompleter = new QCompleter(m_studentSearchModel, this);
+        m_studentSearchCompleter->setCaseSensitivity(Qt::CaseInsensitive);
+        m_studentSearchCompleter->setFilterMode(Qt::MatchContains);
+        m_studentSearchCompleter->setCompletionMode(QCompleter::PopupCompletion);
+        m_studentSearchInput->setCompleter(m_studentSearchCompleter);
         layout->addWidget(m_studentSearchInput);
 
         auto *filterRow = new QHBoxLayout();
@@ -1378,14 +1395,24 @@ private:
         m_studentFilterInput->addItem("All students", "all");
         m_studentFilterInput->addItem("Assigned only", "assigned");
         m_studentFilterInput->addItem("Unassigned only", "unassigned");
+        m_studentYearFilterInput = new QComboBox(box);
+        m_studentYearFilterInput->addItem("Any year", 0);
+        m_studentDormitoryFilterInput = new QComboBox(box);
+        m_studentDormitoryFilterInput->addItem("Any dormitory", "all");
         auto *clearSearch = new QPushButton("Clear", box);
         filterRow->addWidget(m_studentFilterInput, 1);
+        filterRow->addWidget(m_studentYearFilterInput, 1);
+        filterRow->addWidget(m_studentDormitoryFilterInput, 1);
         filterRow->addWidget(clearSearch);
         layout->addLayout(filterRow);
 
+        auto *tableHint = classLabel("Select a row to open its profile. Double-click or press Enter to focus the profile editor.", "muted");
+        tableHint->setWordWrap(true);
+        layout->addWidget(tableHint);
         m_studentTable = new QTableWidget(box);
         setupTable(m_studentTable, {"ID", "Full Name", "Year", "Assignment"});
         applyColumnWeights(m_studentTable, {72, 165, 55, 145});
+        m_studentTable->setFocusPolicy(Qt::StrongFocus);
         m_studentTable->setMinimumHeight(170);
         layout->addWidget(m_studentTable, 1);
 
@@ -1416,12 +1443,31 @@ private:
         layout->addWidget(addBox);
 
         connect(m_studentSearchInput, &QLineEdit::textChanged, this, [this] { refreshStudents(); });
+        connect(m_studentSearchCompleter, qOverload<const QString &>(&QCompleter::activated), this, [this](const QString &value) {
+            openStudentFromSearch(value);
+        });
+        connect(m_studentSearchInput, &QLineEdit::returnPressed, this, [this] {
+            openStudentFromSearch(m_studentSearchInput->text());
+        });
         connect(m_studentFilterInput, &QComboBox::currentIndexChanged, this, [this] { refreshStudents(); });
+        connect(m_studentYearFilterInput, &QComboBox::currentIndexChanged, this, [this] { refreshStudents(); });
+        connect(m_studentDormitoryFilterInput, &QComboBox::currentIndexChanged, this, [this] { refreshStudents(); });
         connect(clearSearch, &QPushButton::clicked, this, [this] {
             m_studentSearchInput->clear();
             m_studentFilterInput->setCurrentIndex(0);
+            m_studentYearFilterInput->setCurrentIndex(0);
+            m_studentDormitoryFilterInput->setCurrentIndex(0);
         });
         connect(m_studentTable, &QTableWidget::itemSelectionChanged, this, [this] { selectStudentFromTable(); });
+        connect(m_studentTable, &QTableWidget::itemActivated, this, [this](QTableWidgetItem *item) {
+            if (item != nullptr) {
+                selectStudentFromTable();
+                if (m_profileNameInput != nullptr) {
+                    m_profileNameInput->setFocus();
+                    m_profileNameInput->selectAll();
+                }
+            }
+        });
         connect(addButton, &QPushButton::clicked, this, [this] { addStudent(); });
         return box;
     }
@@ -1441,31 +1487,35 @@ private:
         auto *content = new QWidget(scroll);
         auto *profileLayout = new QVBoxLayout(content);
         profileLayout->setContentsMargins(0, 0, 4, 0);
-        profileLayout->setSpacing(6);
+        profileLayout->setSpacing(4);
 
         m_profileNameLabel = classLabel("No student selected", "cardTitle");
         m_profileMetaLabel = classLabel("Search for a student by name or ID.", "muted");
         m_profileAssignmentLabel = classLabel("Assignment will appear here.", "muted");
         m_profileRoomLabel = classLabel("Room details will appear here.", "muted");
         m_profileAccessLabel = classLabel("Access scope will appear here.", "muted");
+        m_profileResidentStatusLabel = classLabel("Resident status will appear here.", "muted");
         profileLayout->addWidget(m_profileNameLabel);
         profileLayout->addWidget(m_profileMetaLabel);
         profileLayout->addWidget(m_profileAssignmentLabel);
         profileLayout->addWidget(m_profileRoomLabel);
         profileLayout->addWidget(m_profileAccessLabel);
+        m_profileResidentStatusLabel->hide();
 
         m_profileNameInput = new QLineEdit(box);
         m_profileNameInput->setPlaceholderText("Full name");
-        m_profileNameInput->setFixedHeight(36);
+        m_profileNameInput->setFixedHeight(32);
         m_profileYearInput = new QSpinBox(box);
         m_profileYearInput->setRange(1, 8);
-        m_profileYearInput->setFixedHeight(36);
+        m_profileYearInput->setFixedHeight(32);
         profileLayout->addWidget(fieldLabel("Modify Full Name", m_profileNameInput));
         profileLayout->addWidget(fieldLabel("Modify Academic Year", m_profileYearInput));
+        connect(m_profileNameInput, &QLineEdit::textEdited, this, [this] { markStudentProfileDirty(); });
+        connect(m_profileYearInput, &QSpinBox::valueChanged, this, [this] { markStudentProfileDirty(); });
 
         auto *save = new QPushButton("Save changes", box);
         save->setProperty("class", "primary");
-        save->setMinimumHeight(36);
+        save->setMinimumHeight(32);
         connect(save, &QPushButton::clicked, this, [this] { saveSelectedStudent(); });
         profileLayout->addWidget(save);
 
@@ -1475,9 +1525,9 @@ private:
         auto *duplicate = new QPushButton("Duplicate", box);
         auto *deleteButton = new QPushButton("Delete", box);
         deleteButton->setProperty("class", "danger");
-        reset->setFixedHeight(34);
-        duplicate->setFixedHeight(34);
-        deleteButton->setFixedHeight(34);
+        reset->setFixedHeight(32);
+        duplicate->setFixedHeight(32);
+        deleteButton->setFixedHeight(32);
         utilityRow->addWidget(reset);
         utilityRow->addWidget(duplicate);
         utilityRow->addWidget(deleteButton);
@@ -1486,13 +1536,12 @@ private:
         connect(duplicate, &QPushButton::clicked, this, [this] { duplicateSelectedStudent(); });
         connect(deleteButton, &QPushButton::clicked, this, [this] { deleteSelectedStudent(); });
 
-        profileLayout->addSpacing(4);
         profileLayout->addWidget(classLabel("Accommodation Actions", "cardTitle"));
         m_assignDormitoryInput = new QComboBox(box);
-        m_assignDormitoryInput->setFixedHeight(36);
+        m_assignDormitoryInput->setFixedHeight(32);
         m_assignRoomInput = new QSpinBox(box);
         m_assignRoomInput->setRange(1, 9999);
-        m_assignRoomInput->setFixedHeight(36);
+        m_assignRoomInput->setFixedHeight(32);
         profileLayout->addWidget(fieldLabel("Dormitory", m_assignDormitoryInput));
         profileLayout->addWidget(fieldLabel("Room Number", m_assignRoomInput));
 
@@ -1502,8 +1551,8 @@ private:
         assign->setProperty("class", "primary");
         auto *remove = new QPushButton("Remove", box);
         remove->setProperty("class", "danger");
-        assign->setFixedHeight(34);
-        remove->setFixedHeight(34);
+        assign->setFixedHeight(32);
+        remove->setFixedHeight(32);
         actionRow->addWidget(assign);
         actionRow->addWidget(remove);
         profileLayout->addLayout(actionRow);
@@ -1764,6 +1813,7 @@ private:
             }
             student.setFullName(m_profileNameInput->text().trimmed());
             student.setAcademicYear(m_profileYearInput->value());
+            m_studentProfileDirty = false;
             setStudentPanelMessage("Student profile updated.");
         });
     }
@@ -1771,6 +1821,7 @@ private:
     void resetSelectedStudentEdits()
     {
         updateSelectedStudentProfile();
+        m_studentProfileDirty = false;
         setStudentPanelMessage("Unsaved edits reset.");
     }
 
@@ -2141,14 +2192,84 @@ private:
         }
     }
 
+    void refreshStudentSearchOptions()
+    {
+        if (m_studentSearchModel == nullptr) {
+            return;
+        }
+
+        QStringList suggestions;
+        for (const Student &student : visibleStudents()) {
+            suggestions.append(student.id() + " - " + student.fullName());
+            suggestions.append(student.id());
+            suggestions.append(student.fullName());
+        }
+        suggestions.removeDuplicates();
+        suggestions.sort(Qt::CaseInsensitive);
+        m_studentSearchModel->setStringList(suggestions);
+    }
+
+    void refreshStudentFilterOptions()
+    {
+        if (m_studentYearFilterInput == nullptr || m_studentDormitoryFilterInput == nullptr) {
+            return;
+        }
+
+        const int selectedYear = m_studentYearFilterInput->currentData().toInt();
+        const QString selectedDormitory = m_studentDormitoryFilterInput->currentData().toString();
+
+        {
+            QSignalBlocker yearBlocker(m_studentYearFilterInput);
+            QSet<int> years;
+            for (const Student &student : visibleStudents()) {
+                years.insert(student.academicYear());
+            }
+            QList<int> sortedYears = years.values();
+            std::sort(sortedYears.begin(), sortedYears.end());
+
+            m_studentYearFilterInput->clear();
+            m_studentYearFilterInput->addItem("Any year", 0);
+            for (int year : sortedYears) {
+                m_studentYearFilterInput->addItem("Year " + QString::number(year), year);
+            }
+            selectComboData(m_studentYearFilterInput, selectedYear);
+        }
+
+        {
+            QSignalBlocker dormitoryBlocker(m_studentDormitoryFilterInput);
+            m_studentDormitoryFilterInput->clear();
+            m_studentDormitoryFilterInput->addItem("Any dormitory", "all");
+            m_studentDormitoryFilterInput->addItem("Unassigned", "unassigned");
+            for (const Dormitory &dormitory : visibleDormitories()) {
+                m_studentDormitoryFilterInput->addItem(dormitory.name(), dormitory.id());
+            }
+            selectComboData(m_studentDormitoryFilterInput, selectedDormitory);
+        }
+    }
+
+    QString normalizedStudentSearchQuery() const
+    {
+        if (m_studentSearchInput == nullptr) {
+            return {};
+        }
+
+        const QString text = m_studentSearchInput->text().trimmed();
+        const QString studentId = studentIdFromSearchText(text);
+        return studentId.isEmpty() ? text.toLower() : studentId.toLower();
+    }
+
     void refreshStudents()
     {
         if (m_studentTable == nullptr) {
             return;
         }
+        refreshStudentSearchOptions();
+        refreshStudentFilterOptions();
         m_studentTable->setRowCount(0);
-        const QString query = m_studentSearchInput == nullptr ? QString() : m_studentSearchInput->text().trimmed().toLower();
+        const QString query = normalizedStudentSearchQuery();
         const QString filter = m_studentFilterInput == nullptr ? QStringLiteral("all") : m_studentFilterInput->currentData().toString();
+        const int yearFilter = m_studentYearFilterInput == nullptr ? 0 : m_studentYearFilterInput->currentData().toInt();
+        const QString dormitoryFilter = m_studentDormitoryFilterInput == nullptr ? QStringLiteral("all") : m_studentDormitoryFilterInput->currentData().toString();
         int visibleCount = 0;
         for (const Student &student : visibleStudents()) {
             if (!query.isEmpty()
@@ -2160,6 +2281,16 @@ private:
                 continue;
             }
             if (filter == "unassigned" && student.isAssigned()) {
+                continue;
+            }
+            if (yearFilter > 0 && student.academicYear() != yearFilter) {
+                continue;
+            }
+            if (dormitoryFilter == "unassigned" && student.isAssigned()) {
+                continue;
+            }
+            if (dormitoryFilter != "all" && dormitoryFilter != "unassigned"
+                && (!student.isAssigned() || student.dormitoryId().value() != dormitoryFilter)) {
                 continue;
             }
             const int row = m_studentTable->rowCount();
@@ -2174,13 +2305,17 @@ private:
             m_studentCountLabel->setText(QString::number(visibleCount) + " visible");
         }
         selectStudentRow(m_selectedStudentId);
-        if ((m_selectedStudentId.isEmpty() || m_studentTable->selectedItems().isEmpty()) && m_studentTable->rowCount() > 0) {
+        if (!m_studentProfileDirty
+            && (m_selectedStudentId.isEmpty() || m_studentTable->selectedItems().isEmpty())
+            && m_studentTable->rowCount() > 0) {
             m_studentTable->selectRow(0);
         }
-        if (m_studentTable->rowCount() == 0) {
+        if (!m_studentProfileDirty && m_studentTable->rowCount() == 0) {
             m_selectedStudentId.clear();
         }
-        updateSelectedStudentProfile();
+        if (!m_studentProfileDirty) {
+            updateSelectedStudentProfile();
+        }
     }
 
     void refreshResidentCards()
@@ -2296,14 +2431,24 @@ private:
 
     void selectStudentFromTable()
     {
-        if (m_studentTable == nullptr || m_studentTable->selectedItems().isEmpty()) {
+        if (m_restoringStudentSelection || m_studentTable == nullptr || m_studentTable->selectedItems().isEmpty()) {
             return;
         }
         const int row = m_studentTable->currentRow();
         if (row < 0) {
             return;
         }
-        m_selectedStudentId = m_studentTable->item(row, 0)->text();
+        const QString requestedStudentId = m_studentTable->item(row, 0)->text();
+        if (requestedStudentId == m_selectedStudentId) {
+            return;
+        }
+        if (!confirmDiscardStudentProfileEdits()) {
+            restoreStudentSelection();
+            setStudentPanelMessage("Save or reset profile edits before opening another student.", true);
+            return;
+        }
+        m_selectedStudentId = requestedStudentId;
+        m_studentProfileDirty = false;
         updateSelectedStudentProfile();
     }
 
@@ -2321,6 +2466,94 @@ private:
         }
     }
 
+    void restoreStudentSelection()
+    {
+        if (m_studentTable == nullptr) {
+            return;
+        }
+
+        QSignalBlocker blocker(m_studentTable);
+        m_restoringStudentSelection = true;
+        selectStudentRow(m_selectedStudentId);
+        m_restoringStudentSelection = false;
+    }
+
+    bool confirmDiscardStudentProfileEdits()
+    {
+        if (!m_studentProfileDirty) {
+            return true;
+        }
+
+        const QMessageBox::StandardButton answer = QMessageBox::question(
+            this,
+            "Unsaved profile edits",
+            "This profile has unsaved edits. Discard them and open another student?",
+            QMessageBox::Discard | QMessageBox::Cancel,
+            QMessageBox::Cancel);
+        return answer == QMessageBox::Discard;
+    }
+
+    void markStudentProfileDirty()
+    {
+        if (m_loadingStudentProfile || m_selectedStudentId.isEmpty()) {
+            return;
+        }
+
+        m_studentProfileDirty = true;
+        setStudentPanelMessage("Unsaved profile edits. Save changes or reset edits before opening another student.");
+    }
+
+    QString studentIdFromSearchText(const QString &text) const
+    {
+        const QString trimmed = text.trimmed();
+        if (trimmed.isEmpty()) {
+            return {};
+        }
+
+        const QString possibleId = trimmed.section(" - ", 0, 0).trimmed().toUpper();
+        if (m_university.hasStudent(possibleId)) {
+            return possibleId;
+        }
+
+        for (const Student &student : visibleStudents()) {
+            if (student.id().compare(trimmed, Qt::CaseInsensitive) == 0
+                || student.fullName().compare(trimmed, Qt::CaseInsensitive) == 0
+                || (student.id() + " - " + student.fullName()).compare(trimmed, Qt::CaseInsensitive) == 0) {
+                return student.id();
+            }
+        }
+        return {};
+    }
+
+    void openStudentFromSearch(const QString &text)
+    {
+        const QString studentId = studentIdFromSearchText(text);
+        if (studentId.isEmpty() || !m_university.hasStudent(studentId)) {
+            return;
+        }
+        if (!confirmDiscardStudentProfileEdits()) {
+            return;
+        }
+
+        {
+            QSignalBlocker statusBlocker(m_studentFilterInput);
+            QSignalBlocker yearBlocker(m_studentYearFilterInput);
+            QSignalBlocker dormitoryBlocker(m_studentDormitoryFilterInput);
+            m_studentFilterInput->setCurrentIndex(0);
+            m_studentYearFilterInput->setCurrentIndex(0);
+            m_studentDormitoryFilterInput->setCurrentIndex(0);
+        }
+        m_studentProfileDirty = false;
+        m_selectedStudentId = studentId;
+        if (m_studentSearchInput != nullptr) {
+            QSignalBlocker searchBlocker(m_studentSearchInput);
+            m_studentSearchInput->setText(studentId);
+        }
+        refreshStudents();
+        selectStudentRow(studentId);
+        updateSelectedStudentProfile();
+    }
+
     Student &selectedStudent()
     {
         if (m_selectedStudentId.isEmpty() || !m_university.hasStudent(m_selectedStudentId)) {
@@ -2336,25 +2569,37 @@ private:
         }
 
         if (m_selectedStudentId.isEmpty() || !m_university.hasStudent(m_selectedStudentId)) {
+            m_loadingStudentProfile = true;
             m_profileNameLabel->setText("No student selected");
             m_profileMetaLabel->setText("Search for a student by name or ID.");
             m_profileAssignmentLabel->setText("Assignment will appear here.");
             m_profileRoomLabel->setText("Room details will appear here.");
             m_profileAccessLabel->setText("Access scope will appear here.");
+            m_profileResidentStatusLabel->clear();
             m_profileNameInput->clear();
             m_profileYearInput->setValue(1);
+            m_loadingStudentProfile = false;
+            m_studentProfileDirty = false;
             setProfileControlsEnabled(false);
             return;
         }
 
         const Student &student = m_university.student(m_selectedStudentId);
+        m_loadingStudentProfile = true;
+        QSignalBlocker nameBlocker(m_profileNameInput);
+        QSignalBlocker yearBlocker(m_profileYearInput);
         m_profileNameLabel->setText(student.fullName());
-        m_profileMetaLabel->setText(student.id() + " - Academic year " + QString::number(student.academicYear()));
-        m_profileAssignmentLabel->setText(assignmentText(student));
+        m_profileMetaLabel->setText("ID: " + student.id()
+            + " | Year " + QString::number(student.academicYear())
+            + " | " + residentStatusText(student));
+        m_profileAssignmentLabel->setText("Assignment: " + assignmentText(student));
         m_profileRoomLabel->setText(roomDetailText(student));
         m_profileAccessLabel->setText(accessDetailText(student));
+        m_profileResidentStatusLabel->clear();
         m_profileNameInput->setText(student.fullName());
         m_profileYearInput->setValue(student.academicYear());
+        m_loadingStudentProfile = false;
+        m_studentProfileDirty = false;
         setProfileControlsEnabled(true);
     }
 
@@ -2373,19 +2618,21 @@ private:
     QString roomDetailText(const Student &student) const
     {
         if (!student.isAssigned()) {
-            return "No accommodation assigned yet.";
+            return "Room details: no accommodation assigned yet.";
         }
 
         const Dormitory &dormitory = m_university.dormitory(student.dormitoryId().value());
         const Room &room = dormitory.room(student.roomNumber().value());
-        return dormitory.name() + " - room capacity "
+        return "Dormitory: " + dormitory.id() + " - " + dormitory.name()
+            + " | Room " + QString::number(room.number())
+            + " | Capacity/occupancy "
             + QString::number(room.occupancy()) + " / " + QString::number(room.capacity());
     }
 
     QString accessDetailText(const Student &student) const
     {
         if (!student.isAssigned()) {
-            return "Visible because this student is unassigned.";
+            return "Scope: unassigned resident, visible to full-access and neighborhood admins.";
         }
 
         const QString dormitoryId = student.dormitoryId().value();
@@ -2393,7 +2640,18 @@ private:
         const QString neighborhoodText = neighborhood == nullptr
             ? "No neighborhood"
             : neighborhood->id + " - " + neighborhood->name;
-        return "Scope: " + neighborhoodText + (currentAdminCanAccessDormitory(dormitoryId) ? " (editable)" : " (view only)");
+        return "Scope/access: " + neighborhoodText + (currentAdminCanAccessDormitory(dormitoryId) ? " (editable)" : " (view only)");
+    }
+
+    QString residentStatusText(const Student &student) const
+    {
+        if (!student.isAssigned()) {
+            return "Unassigned";
+        }
+
+        const QString dormitoryId = student.dormitoryId().value();
+        return "Resident in " + dormitoryId
+            + (currentAdminCanAccessDormitory(dormitoryId) ? " (editable)" : " (read-only)");
     }
 
     const Neighborhood *findNeighborhoodForDormitory(const QString &dormitoryId) const
@@ -2488,6 +2746,14 @@ private:
     }
 
     static void selectComboData(QComboBox *combo, const QString &value)
+    {
+        const int index = combo->findData(value);
+        if (index >= 0) {
+            combo->setCurrentIndex(index);
+        }
+    }
+
+    static void selectComboData(QComboBox *combo, int value)
     {
         const int index = combo->findData(value);
         if (index >= 0) {
