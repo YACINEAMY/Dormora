@@ -26,6 +26,7 @@
 #include <QJsonObject>
 #include <QPropertyAnimation>
 #include <QPushButton>
+#include <QShortcut>
 #include <QSaveFile>
 #include <QScreen>
 #include <QScrollArea>
@@ -96,6 +97,20 @@ QPushButton#windowButton {
 QPushButton#windowButton:hover {
     background: rgba(25,135,84,0.18);
 }
+QPushButton#windowButtonWide {
+    background: rgba(15,81,50,0.08);
+    border: none;
+    border-radius: 13px;
+    min-width: 42px;
+    max-width: 42px;
+    min-height: 26px;
+    max-height: 26px;
+    padding: 0;
+    font-weight: 800;
+}
+QPushButton#windowButtonWide:hover {
+    background: rgba(25,135,84,0.18);
+}
 QPushButton#closeButton {
     background: rgba(180,35,24,0.10);
     color: #B42318;
@@ -123,6 +138,18 @@ QFrame#studentSidebar {
     border: none;
     border-top-left-radius: 21px;
     border-bottom-left-radius: 21px;
+}
+QPushButton#sidebarToggle {
+    background: rgba(255,255,255,0.10);
+    color: #F7FAF8;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 8px;
+    min-height: 34px;
+    padding: 0 10px;
+    font-weight: 800;
+}
+QPushButton#sidebarToggle:hover {
+    background: rgba(255,255,255,0.18);
 }
 QFrame#loginBrand {
     background: #123D32;
@@ -501,33 +528,53 @@ public:
         qApp->setStyleSheet(kAppStyle);
         statusBar()->setSizeGripEnabled(false);
         statusBar()->hide();
+        auto *fullscreenShortcut = new QShortcut(QKeySequence(Qt::Key_F11), this);
+        connect(fullscreenShortcut, &QShortcut::activated, this, [this] { toggleFullScreen(); });
         buildLoginUi();
         setWindowTitle("Dormora");
         resize(1280, 780);
-        setMinimumSize(1100, 680);
+        setMinimumSize(980, 620);
     }
 
 protected:
     void mousePressEvent(QMouseEvent *event) override
     {
         if (event->button() == Qt::LeftButton) {
-            m_draggingWindow = event->position().y() < 80 || event->position().x() < 260;
-            m_dragPosition = event->globalPosition().toPoint() - frameGeometry().topLeft();
+            m_resizeEdges = resizeEdgesAt(event->position().toPoint());
+            if (m_resizeEdges != 0 && !isMaximized() && !isFullScreen()) {
+                m_resizingWindow = true;
+                m_resizeStartPosition = event->globalPosition().toPoint();
+                m_resizeStartGeometry = geometry();
+            } else {
+                m_draggingWindow = !isMaximized() && !isFullScreen()
+                    && (event->position().y() < 80 || event->position().x() < (m_sidebarCollapsed ? 90 : 260));
+                m_dragPosition = event->globalPosition().toPoint() - frameGeometry().topLeft();
+            }
             event->accept();
         }
     }
 
     void mouseMoveEvent(QMouseEvent *event) override
     {
+        if (m_resizingWindow && (event->buttons() & Qt::LeftButton)) {
+            resizeFromMouse(event->globalPosition().toPoint());
+            event->accept();
+            return;
+        }
         if (m_draggingWindow && (event->buttons() & Qt::LeftButton)) {
             move(event->globalPosition().toPoint() - m_dragPosition);
             event->accept();
+            return;
         }
+        updateResizeCursor(event->position().toPoint());
     }
 
     void mouseReleaseEvent(QMouseEvent *event) override
     {
         m_draggingWindow = false;
+        m_resizingWindow = false;
+        m_resizeEdges = 0;
+        unsetCursor();
         QMainWindow::mouseReleaseEvent(event);
     }
 
@@ -547,7 +594,12 @@ private:
     QString m_currentAdminUsername;
     QString m_currentStudentId;
     QPoint m_dragPosition;
+    QPoint m_resizeStartPosition;
+    QRect m_resizeStartGeometry;
     bool m_draggingWindow = false;
+    bool m_resizingWindow = false;
+    int m_resizeEdges = 0;
+    bool m_sidebarCollapsed = false;
     bool m_enableAnimations = true;
 
     QStackedWidget *m_stack = nullptr;
@@ -604,6 +656,13 @@ private:
     bool m_studentProfileDirty = false;
     bool m_restoringStudentSelection = false;
     bool m_loadingStudentProfile = false;
+
+    enum ResizeEdge {
+        LeftEdge = 0x1,
+        RightEdge = 0x2,
+        TopEdge = 0x4,
+        BottomEdge = 0x8,
+    };
 
     void loadOrSeedData()
     {
@@ -762,6 +821,97 @@ private:
         }
     }
 
+    int resizeEdgesAt(const QPoint &position) const
+    {
+        if (isMaximized() || isFullScreen()) {
+            return 0;
+        }
+
+        constexpr int margin = 8;
+        int edges = 0;
+        if (position.x() <= margin) {
+            edges |= LeftEdge;
+        }
+        if (position.x() >= width() - margin) {
+            edges |= RightEdge;
+        }
+        if (position.y() <= margin) {
+            edges |= TopEdge;
+        }
+        if (position.y() >= height() - margin) {
+            edges |= BottomEdge;
+        }
+        return edges;
+    }
+
+    void updateResizeCursor(const QPoint &position)
+    {
+        const int edges = resizeEdgesAt(position);
+        if ((edges & LeftEdge && edges & TopEdge) || (edges & RightEdge && edges & BottomEdge)) {
+            setCursor(Qt::SizeFDiagCursor);
+        } else if ((edges & RightEdge && edges & TopEdge) || (edges & LeftEdge && edges & BottomEdge)) {
+            setCursor(Qt::SizeBDiagCursor);
+        } else if (edges & (LeftEdge | RightEdge)) {
+            setCursor(Qt::SizeHorCursor);
+        } else if (edges & (TopEdge | BottomEdge)) {
+            setCursor(Qt::SizeVerCursor);
+        } else {
+            unsetCursor();
+        }
+    }
+
+    void resizeFromMouse(const QPoint &globalPosition)
+    {
+        QRect next = m_resizeStartGeometry;
+        const QPoint delta = globalPosition - m_resizeStartPosition;
+        const QSize minimum = minimumSize();
+
+        if (m_resizeEdges & LeftEdge) {
+            const int newLeft = std::min(next.right() - minimum.width() + 1, m_resizeStartGeometry.left() + delta.x());
+            next.setLeft(newLeft);
+        }
+        if (m_resizeEdges & RightEdge) {
+            next.setRight(std::max(next.left() + minimum.width() - 1, m_resizeStartGeometry.right() + delta.x()));
+        }
+        if (m_resizeEdges & TopEdge) {
+            const int newTop = std::min(next.bottom() - minimum.height() + 1, m_resizeStartGeometry.top() + delta.y());
+            next.setTop(newTop);
+        }
+        if (m_resizeEdges & BottomEdge) {
+            next.setBottom(std::max(next.top() + minimum.height() - 1, m_resizeStartGeometry.bottom() + delta.y()));
+        }
+        setGeometry(next);
+    }
+
+    void toggleMaximized()
+    {
+        if (isFullScreen()) {
+            showNormal();
+            return;
+        }
+        isMaximized() ? showNormal() : showMaximized();
+    }
+
+    void toggleFullScreen()
+    {
+        isFullScreen() ? showNormal() : showFullScreen();
+    }
+
+    void toggleSidebar()
+    {
+        m_sidebarCollapsed = !m_sidebarCollapsed;
+        if (m_role == AuthRole::Admin) {
+            const int currentPage = m_stack == nullptr ? 0 : m_stack->currentIndex();
+            buildAdminUi();
+            if (m_stack != nullptr && currentPage >= 0 && currentPage < m_stack->count()) {
+                m_stack->setCurrentIndex(currentPage);
+            }
+            refreshAll();
+        } else if (m_role == AuthRole::Student) {
+            buildStudentPortalUi();
+        }
+    }
+
     void buildLoginUi()
     {
         auto *root = new QWidget(this);
@@ -772,7 +922,8 @@ private:
 
         auto *brandPanel = new QFrame(root);
         brandPanel->setObjectName("loginBrand");
-        brandPanel->setFixedWidth(430);
+        brandPanel->setMinimumWidth(320);
+        brandPanel->setMaximumWidth(430);
         auto *brandLayout = new QVBoxLayout(brandPanel);
         brandLayout->setContentsMargins(42, 44, 42, 46);
         brandLayout->setSpacing(12);
@@ -848,12 +999,26 @@ private:
 
         auto *minimize = new QPushButton(QString::fromUtf8("−"), controls);
         minimize->setObjectName("windowButton");
+        minimize->setText("-");
+        minimize->setToolTip("Minimize");
         auto *close = new QPushButton(QString::fromUtf8("×"), controls);
         close->setObjectName("closeButton");
+        close->setText("X");
+        close->setToolTip("Close");
+        auto *maximize = new QPushButton("[]", controls);
+        maximize->setObjectName("windowButton");
+        maximize->setToolTip("Maximize or restore");
+        auto *fullscreen = new QPushButton("F11", controls);
+        fullscreen->setObjectName("windowButtonWide");
+        fullscreen->setToolTip("Toggle full screen");
 
         connect(minimize, &QPushButton::clicked, this, [this] { showMinimized(); });
+        connect(maximize, &QPushButton::clicked, this, [this] { toggleMaximized(); });
+        connect(fullscreen, &QPushButton::clicked, this, [this] { toggleFullScreen(); });
         connect(close, &QPushButton::clicked, this, [this] { this->close(); });
         layout->addWidget(minimize);
+        layout->addWidget(maximize);
+        layout->addWidget(fullscreen);
         layout->addWidget(close);
         return controls;
     }
@@ -963,6 +1128,13 @@ public:
         }
     }
 
+    void collapseSidebarForTest()
+    {
+        if (!m_sidebarCollapsed) {
+            toggleSidebar();
+        }
+    }
+
     void addPersistenceProbeForTest()
     {
         m_university.addStudent(Student("S9999", "Persistence Probe", 1));
@@ -1008,23 +1180,35 @@ private:
     {
         auto *sidebar = new QFrame(this);
         sidebar->setObjectName("sidebar");
-        sidebar->setFixedWidth(238);
+        sidebar->setFixedWidth(m_sidebarCollapsed ? 76 : 238);
 
         auto *layout = new QVBoxLayout(sidebar);
-        layout->setContentsMargins(22, 28, 22, 22);
+        layout->setContentsMargins(m_sidebarCollapsed ? 14 : 22, 28, m_sidebarCollapsed ? 14 : 22, 22);
         layout->setSpacing(11);
-        layout->addWidget(buildBrandLockup(sidebar, "Campus living, organized."));
-        layout->addSpacing(22);
+        if (m_sidebarCollapsed) {
+            layout->addWidget(brandMark(sidebar), 0, Qt::AlignHCenter);
+        } else {
+            layout->addWidget(buildBrandLockup(sidebar, "Campus living, organized."));
+        }
+
+        auto *collapseButton = new QPushButton(m_sidebarCollapsed ? ">>" : "<<", sidebar);
+        collapseButton->setObjectName("sidebarToggle");
+        collapseButton->setToolTip(m_sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar");
+        connect(collapseButton, &QPushButton::clicked, this, [this] { toggleSidebar(); });
+        layout->addWidget(collapseButton);
+        layout->addSpacing(m_sidebarCollapsed ? 12 : 22);
 
         auto *group = new QButtonGroup(sidebar);
         group->setExclusive(true);
 
         const QStringList items = {"Dashboard", "Residents", "Meals", "Neighborhoods"};
+        const QStringList compactItems = {"D", "R", "M", "N"};
         for (int i = 0; i < items.size(); ++i) {
-            auto *button = new QPushButton(items[i], sidebar);
+            auto *button = new QPushButton(m_sidebarCollapsed ? compactItems[i] : items[i], sidebar);
             button->setProperty("nav", true);
             button->setCheckable(true);
             button->setMinimumHeight(44);
+            button->setToolTip(items[i]);
             group->addButton(button, i);
             layout->addWidget(button);
             connect(button, &QPushButton::clicked, this, [this, i] { m_stack->setCurrentIndex(i); });
@@ -1034,17 +1218,20 @@ private:
         }
 
         layout->addStretch();
-        auto *logoutButton = new QPushButton("Log out", sidebar);
+        auto *logoutButton = new QPushButton(m_sidebarCollapsed ? "L" : "Log out", sidebar);
         logoutButton->setProperty("nav", true);
         logoutButton->setMinimumHeight(44);
+        logoutButton->setToolTip("Log out");
         connect(logoutButton, &QPushButton::clicked, this, [this] { logout(); });
         layout->addWidget(logoutButton);
-        auto *hint = label("Dormora Console\nCampus operations", "brandSub", sidebar);
-        if (!m_currentAdminUsername.isEmpty()) {
-            const AdminProfile profile = m_adminProfiles.value(m_currentAdminUsername);
-            hint->setText(profile.displayName + "\n" + (profile.fullAccess ? "Full access" : "Neighborhood access"));
+        if (!m_sidebarCollapsed) {
+            auto *hint = label("Dormora Console\nCampus operations", "brandSub", sidebar);
+            if (!m_currentAdminUsername.isEmpty()) {
+                const AdminProfile profile = m_adminProfiles.value(m_currentAdminUsername);
+                hint->setText(profile.displayName + "\n" + (profile.fullAccess ? "Full access" : "Neighborhood access"));
+            }
+            layout->addWidget(hint);
         }
-        layout->addWidget(hint);
         return sidebar;
     }
 
@@ -1058,17 +1245,30 @@ private:
 
         auto *sidebar = new QFrame(root);
         sidebar->setObjectName("studentSidebar");
-        sidebar->setFixedWidth(238);
+        sidebar->setFixedWidth(m_sidebarCollapsed ? 76 : 238);
         auto *sideLayout = new QVBoxLayout(sidebar);
-        sideLayout->setContentsMargins(22, 28, 22, 22);
+        sideLayout->setContentsMargins(m_sidebarCollapsed ? 14 : 22, 28, m_sidebarCollapsed ? 14 : 22, 22);
         sideLayout->setSpacing(11);
-        sideLayout->addWidget(buildBrandLockup(sidebar, "Resident portal"));
-        sideLayout->addSpacing(22);
-        sideLayout->addWidget(label("Room status\nMeal access\nResident record", "brandSub", sidebar));
+        if (m_sidebarCollapsed) {
+            sideLayout->addWidget(brandMark(sidebar), 0, Qt::AlignHCenter);
+        } else {
+            sideLayout->addWidget(buildBrandLockup(sidebar, "Resident portal"));
+        }
+
+        auto *collapseButton = new QPushButton(m_sidebarCollapsed ? ">>" : "<<", sidebar);
+        collapseButton->setObjectName("sidebarToggle");
+        collapseButton->setToolTip(m_sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar");
+        connect(collapseButton, &QPushButton::clicked, this, [this] { toggleSidebar(); });
+        sideLayout->addWidget(collapseButton);
+        sideLayout->addSpacing(m_sidebarCollapsed ? 12 : 22);
+        if (!m_sidebarCollapsed) {
+            sideLayout->addWidget(label("Room status\nMeal access\nResident record", "brandSub", sidebar));
+        }
         sideLayout->addStretch();
-        auto *logoutButton = new QPushButton("Log out", sidebar);
+        auto *logoutButton = new QPushButton(m_sidebarCollapsed ? "L" : "Log out", sidebar);
         logoutButton->setProperty("nav", true);
         logoutButton->setMinimumHeight(44);
+        logoutButton->setToolTip("Log out");
         connect(logoutButton, &QPushButton::clicked, this, [this] { logout(); });
         sideLayout->addWidget(logoutButton);
         rootLayout->addWidget(sidebar);
@@ -2923,6 +3123,9 @@ int main(int argc, char *argv[])
     const int pageIndex = QCoreApplication::arguments().indexOf("--page");
     if (pageIndex >= 0) {
         window.showPageForTest(QCoreApplication::arguments().value(pageIndex + 1, "0").toInt());
+    }
+    if (QCoreApplication::arguments().contains("--collapse-sidebar")) {
+        window.collapseSidebarForTest();
     }
     if (QCoreApplication::arguments().contains("--smoke-test")) {
         return 0;
