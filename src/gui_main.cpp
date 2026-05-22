@@ -8,6 +8,8 @@
 #include <QDateEdit>
 #include <QDialog>
 #include <QDir>
+#include <QElapsedTimer>
+#include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
 #include <QFrame>
@@ -29,6 +31,7 @@
 #include <QPropertyAnimation>
 #include <QPushButton>
 #include <QPixmap>
+#include <QProgressBar>
 #include <QShortcut>
 #include <QSaveFile>
 #include <QScreen>
@@ -380,7 +383,39 @@ QLabel#appStatus {
     font-size: 12px;
     padding: 1px 18px;
 }
+QWidget#startupLoadingScreen {
+    background: transparent;
+}
+QFrame#startupLoadingCard {
+    background: #F7FAF8;
+    border: 1px solid #C9DED3;
+    border-radius: 22px;
+}
+QLabel#loadingBrandName {
+    color: #123D32;
+    font-size: 30px;
+    font-weight: 800;
+}
+QLabel#loadingMessage {
+    color: #315B4B;
+    font-size: 13px;
+    font-weight: 650;
+}
+QProgressBar#startupProgress {
+    background: #E4F0EA;
+    border: none;
+    border-radius: 4px;
+    height: 8px;
+    max-height: 8px;
+    text-align: center;
+}
+QProgressBar#startupProgress::chunk {
+    background: #198754;
+    border-radius: 4px;
+}
 )";
+
+constexpr int kStartupLoadingMinimumMs = 240;
 
 QLabel *label(const QString &text, const QString &objectName = {}, QWidget *parent = nullptr)
 {
@@ -413,6 +448,92 @@ QFrame *brandMark(QWidget *parent = nullptr)
     logo->setMaximumSize(44, 44);
     layout->addWidget(logo);
     return mark;
+}
+
+QWidget *buildStartupLoadingScreen()
+{
+    auto *screen = new QWidget(nullptr, Qt::SplashScreen | Qt::FramelessWindowHint);
+    screen->setObjectName("startupLoadingScreen");
+    screen->setAttribute(Qt::WA_TranslucentBackground);
+    screen->resize(460, 300);
+
+    auto *outer = new QVBoxLayout(screen);
+    outer->setContentsMargins(12, 12, 12, 12);
+
+    auto *card = new QFrame(screen);
+    card->setObjectName("startupLoadingCard");
+    auto *layout = new QVBoxLayout(card);
+    layout->setContentsMargins(42, 38, 42, 34);
+    layout->setSpacing(14);
+
+    auto *logo = new QLabel(card);
+    logo->setObjectName("loadingLogo");
+    logo->setAlignment(Qt::AlignCenter);
+    logo->setPixmap(QPixmap(":/icons/dormora-logo.svg").scaled(72, 72, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    logo->setMinimumSize(72, 72);
+    logo->setMaximumHeight(78);
+    layout->addWidget(logo, 0, Qt::AlignHCenter);
+
+    auto *brand = label("Dormora", "loadingBrandName", card);
+    brand->setAlignment(Qt::AlignCenter);
+    layout->addWidget(brand);
+
+    auto *message = label("Preparing your campus workspace...", "loadingMessage", card);
+    message->setAlignment(Qt::AlignCenter);
+    layout->addWidget(message);
+
+    auto *progress = new QProgressBar(card);
+    progress->setObjectName("startupProgress");
+    progress->setRange(0, 0);
+    progress->setTextVisible(false);
+    progress->setMinimumWidth(260);
+    layout->addSpacing(6);
+    layout->addWidget(progress);
+
+    outer->addWidget(card);
+    return screen;
+}
+
+void centerOnPrimaryScreen(QWidget *widget)
+{
+    if (widget == nullptr) {
+        return;
+    }
+    if (const QScreen *screen = QApplication::primaryScreen()) {
+        const QRect available = screen->availableGeometry();
+        widget->move(available.center() - widget->rect().center());
+    }
+}
+
+bool startupLoadingScreenSelfTest()
+{
+    qApp->setFont(QFont("Segoe UI", 10));
+    qApp->setStyleSheet(kAppStyle);
+
+    QWidget *loading = buildStartupLoadingScreen();
+    centerOnPrimaryScreen(loading);
+    loading->show();
+    qApp->processEvents();
+
+    const auto *logo = loading->findChild<QLabel *>("loadingLogo");
+    const auto *brand = loading->findChild<QLabel *>("loadingBrandName");
+    const auto *message = loading->findChild<QLabel *>("loadingMessage");
+    const auto *progress = loading->findChild<QProgressBar *>("startupProgress");
+    const QPixmap logoPixmap = logo == nullptr ? QPixmap() : logo->pixmap();
+    const bool healthy = loading->isVisible()
+        && logo != nullptr
+        && !logoPixmap.isNull()
+        && brand != nullptr
+        && brand->text() == "Dormora"
+        && message != nullptr
+        && message->text().contains("campus workspace")
+        && progress != nullptr
+        && progress->minimum() == 0
+        && progress->maximum() == 0;
+
+    loading->close();
+    delete loading;
+    return healthy;
 }
 
 QString assignmentText(const Student &student)
@@ -3372,12 +3493,20 @@ private:
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    qApp->setFont(QFont("Segoe UI", 10));
+    qApp->setStyleSheet(kAppStyle);
+
+    const QStringList arguments = QCoreApplication::arguments();
     const int dataFileIndex = QCoreApplication::arguments().indexOf("--data-file");
     const QString dataFilePath = dataFileIndex >= 0
         ? QCoreApplication::arguments().value(dataFileIndex + 1)
         : QString();
 
-    if (QCoreApplication::arguments().contains("--persistence-self-test")) {
+    if (arguments.contains("--loading-screen-self-test")) {
+        return startupLoadingScreenSelfTest() ? 0 : 1;
+    }
+
+    if (arguments.contains("--persistence-self-test")) {
         QTemporaryDir tempDir;
         if (!tempDir.isValid()) {
             return 1;
@@ -3389,7 +3518,7 @@ int main(int argc, char *argv[])
         return second.hasStudentForTest("S9999") ? 0 : 1;
     }
 
-    if (QCoreApplication::arguments().contains("--seed-data-self-test")) {
+    if (arguments.contains("--seed-data-self-test")) {
         QTemporaryDir tempDir;
         if (!tempDir.isValid()) {
             return 1;
@@ -3399,7 +3528,7 @@ int main(int argc, char *argv[])
         return seeded.hasRichExampleSeedDataForTest() ? 0 : 1;
     }
 
-    if (QCoreApplication::arguments().contains("--dropdown-self-test")) {
+    if (arguments.contains("--dropdown-self-test")) {
         QTemporaryDir tempDir;
         if (!tempDir.isValid()) {
             return 1;
@@ -3412,32 +3541,53 @@ int main(int argc, char *argv[])
         return dropdownWindow.dropdownsHealthyForTest() ? 0 : 1;
     }
 
+    const int screenshotIndex = arguments.indexOf("--screenshot");
+    const bool smokeTest = arguments.contains("--smoke-test");
+    QWidget *startupLoading = nullptr;
+    QElapsedTimer startupLoadingTimer;
+    if (!smokeTest && screenshotIndex < 0) {
+        startupLoading = buildStartupLoadingScreen();
+        centerOnPrimaryScreen(startupLoading);
+        startupLoadingTimer.start();
+        startupLoading->show();
+        app.processEvents();
+    }
+
     DormitoryWindow window(dataFilePath);
-    const int adminLoginIndex = QCoreApplication::arguments().indexOf("--login-admin");
+    const int adminLoginIndex = arguments.indexOf("--login-admin");
     if (adminLoginIndex >= 0) {
-        window.loginAsAdminForTest(QCoreApplication::arguments().value(adminLoginIndex + 1, "admin"));
+        window.loginAsAdminForTest(arguments.value(adminLoginIndex + 1, "admin"));
     }
-    const int studentLoginIndex = QCoreApplication::arguments().indexOf("--login-student");
+    const int studentLoginIndex = arguments.indexOf("--login-student");
     if (studentLoginIndex >= 0) {
-        window.loginAsStudentForTest(QCoreApplication::arguments().value(studentLoginIndex + 1, "S1001").toUpper());
+        window.loginAsStudentForTest(arguments.value(studentLoginIndex + 1, "S1001").toUpper());
     }
-    const int pageIndex = QCoreApplication::arguments().indexOf("--page");
+    const int pageIndex = arguments.indexOf("--page");
     if (pageIndex >= 0) {
-        window.showPageForTest(QCoreApplication::arguments().value(pageIndex + 1, "0").toInt());
+        window.showPageForTest(arguments.value(pageIndex + 1, "0").toInt());
     }
-    if (QCoreApplication::arguments().contains("--collapse-sidebar")) {
+    if (arguments.contains("--collapse-sidebar")) {
         window.collapseSidebarForTest();
     }
-    if (QCoreApplication::arguments().contains("--smoke-test")) {
+    if (smokeTest) {
         return 0;
     }
-    const int screenshotIndex = QCoreApplication::arguments().indexOf("--screenshot");
     if (screenshotIndex >= 0) {
-        const QString path = QCoreApplication::arguments().value(screenshotIndex + 1, "udrms-gui.png");
+        const QString path = arguments.value(screenshotIndex + 1, "udrms-gui.png");
         window.show();
         app.processEvents();
         window.grab().save(path);
         return 0;
+    }
+    if (startupLoading != nullptr) {
+        const int remainingMs = kStartupLoadingMinimumMs - static_cast<int>(startupLoadingTimer.elapsed());
+        if (remainingMs > 0) {
+            QEventLoop handoffLoop;
+            QTimer::singleShot(remainingMs, &handoffLoop, &QEventLoop::quit);
+            handoffLoop.exec();
+        }
+        startupLoading->close();
+        startupLoading->deleteLater();
     }
     window.show();
     return app.exec();
