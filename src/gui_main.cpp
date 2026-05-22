@@ -664,10 +664,29 @@ private:
         BottomEdge = 0x8,
     };
 
+    struct ExampleStudentSeed {
+        const char *id;
+        const char *name;
+        int year;
+        const char *dormitoryId;
+        int roomNumber;
+    };
+
+    struct ExampleMenuSeed {
+        int dayOffset;
+        const char *dormitoryId;
+        const char *breakfast;
+        const char *lunch;
+        const char *dinner;
+    };
+
     void loadOrSeedData()
     {
         if (QFile::exists(m_dataFilePath)) {
             loadAppState();
+            if (ensureExampleDataVolume()) {
+                saveAppState();
+            }
             return;
         }
 
@@ -682,31 +701,26 @@ private:
         m_adminProfiles.clear();
         m_studentPortalPassword = "student123";
 
-        Dormitory north("D1", "North Dormitory", 6, Restaurant("North Restaurant"));
-        north.addRoom(Room(101, 2));
-        north.addRoom(Room(102, 2));
-        north.addRoom(Room(103, 2));
+        Dormitory north("D1", "North Dormitory", 16, Restaurant("North Restaurant"));
+        for (int roomNumber = 101; roomNumber <= 108; ++roomNumber) {
+            north.addRoom(Room(roomNumber, 2));
+        }
 
-        Dormitory south("D2", "South Dormitory", 4, Restaurant("South Restaurant"));
-        south.addRoom(Room(201, 2));
-        south.addRoom(Room(202, 2));
+        Dormitory south("D2", "South Dormitory", 16, Restaurant("South Restaurant"));
+        for (int roomNumber = 201; roomNumber <= 208; ++roomNumber) {
+            south.addRoom(Room(roomNumber, 2));
+        }
 
         m_university.addDormitory(north);
         m_university.addDormitory(south);
-        m_university.addStudent(Student("S1001", "Amina Benali", 1));
-        m_university.addStudent(Student("S1002", "Karim Haddad", 2));
-        m_university.addStudent(Student("S1003", "Lina Saadi", 3));
-        m_university.addStudent(Student("S1004", "Yanis Merad", 1));
-        m_university.assignStudentToRoom("S1001", "D1", 101);
-        m_university.assignStudentToRoom("S1002", "D1", 101);
-        m_university.assignStudentToRoom("S1003", "D1", 102);
-        m_university.assignStudentToRoom("S1004", "D2", 202);
+        addExampleStudents(true);
+        addExampleMenus(false);
 
         const QDate today = QDate::currentDate();
-        m_university.setRestaurantMenu("D1", today, {"Coffee and eggs", "Chicken and rice", "Soup and salad"});
-        m_university.setRestaurantMenu("D2", today, {"Tea and bread", "Couscous", "Vegetable stew"});
         m_university.recordStudentMeal("S1001", today);
         m_university.recordStudentMeal("S1002", today);
+        m_university.recordStudentMeal("S1004", today);
+        m_university.recordStudentMeal("S1016", today);
 
         m_neighborhoods.append({"NORTH", "North Campus Neighborhood", {"D1"}});
         m_neighborhoods.append({"SOUTH", "South Campus Neighborhood", {"D2"}});
@@ -714,6 +728,127 @@ private:
         m_adminProfiles.insert("admin", {"admin", "admin123", "Global Administrator", true, {}});
         m_adminProfiles.insert("northadmin", {"northadmin", "north123", "North Neighborhood Admin", false, {"NORTH"}});
         m_adminProfiles.insert("southadmin", {"southadmin", "south123", "South Neighborhood Admin", false, {"SOUTH"}});
+    }
+
+    bool ensureExampleDataVolume()
+    {
+        bool changed = addExampleStudents(false);
+        changed = addExampleMenus(true) || changed;
+        return changed;
+    }
+
+    bool addExampleStudents(bool assignRooms)
+    {
+        bool changed = false;
+        for (const ExampleStudentSeed &seed : exampleStudentSeeds()) {
+            const QString studentId = QString::fromLatin1(seed.id);
+            if (!m_university.hasStudent(studentId)) {
+                m_university.addStudent(Student(studentId, QString::fromUtf8(seed.name), seed.year));
+                changed = true;
+            }
+
+            if (!assignRooms || seed.dormitoryId == nullptr) {
+                continue;
+            }
+
+            Student &student = m_university.student(studentId);
+            const QString dormitoryId = QString::fromLatin1(seed.dormitoryId);
+            if (!student.isAssigned()
+                && m_university.hasDormitory(dormitoryId)
+                && m_university.dormitory(dormitoryId).hasRoom(seed.roomNumber)
+                && !m_university.dormitory(dormitoryId).room(seed.roomNumber).isFull()) {
+                m_university.assignStudentToRoom(studentId, dormitoryId, seed.roomNumber);
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    bool addExampleMenus(bool preserveExisting)
+    {
+        bool changed = false;
+        const QDate today = QDate::currentDate();
+        for (const ExampleMenuSeed &seed : exampleMenuSeeds()) {
+            const QString dormitoryId = QString::fromLatin1(seed.dormitoryId);
+            if (!m_university.hasDormitory(dormitoryId)) {
+                continue;
+            }
+
+            const QDate date = today.addDays(seed.dayOffset);
+            if (preserveExisting && m_university.dormitory(dormitoryId).restaurant().menuForDate(date).has_value()) {
+                continue;
+            }
+
+            m_university.setRestaurantMenu(dormitoryId, date, {
+                QString::fromUtf8(seed.breakfast),
+                QString::fromUtf8(seed.lunch),
+                QString::fromUtf8(seed.dinner),
+            });
+            changed = true;
+        }
+        return changed;
+    }
+
+    static QVector<ExampleStudentSeed> exampleStudentSeeds()
+    {
+        return {
+            {"S1001", "Amina Benali", 1, "D1", 101},
+            {"S1002", "Karim Haddad", 2, "D1", 101},
+            {"S1003", "Lina Saadi", 3, "D1", 102},
+            {"S1004", "Yanis Merad", 1, "D2", 201},
+            {"S1005", "Nadia Mansouri", 2, "D1", 102},
+            {"S1006", "Omar Rahmani", 4, "D1", 103},
+            {"S1007", "Sara Bouchard", 1, "D1", 103},
+            {"S1008", "Mehdi Kaci", 3, "D1", 104},
+            {"S1009", "Leila Haddouche", 2, "D1", 104},
+            {"S1010", "Rayan Saad", 1, "D1", 105},
+            {"S1011", "Maya Cherif", 4, "D1", 105},
+            {"S1012", "Ilyes Hamdi", 2, "D1", 106},
+            {"S1013", "Selma Ait Amar", 3, "D1", 106},
+            {"S1014", "Adam Bouzid", 1, "D1", 107},
+            {"S1015", "Ines Ferhat", 2, "D1", 108},
+            {"S1016", "Nour Belkacem", 3, "D2", 201},
+            {"S1017", "Samir Touati", 4, "D2", 202},
+            {"S1018", "Rania Ouali", 1, "D2", 202},
+            {"S1019", "Walid Ziane", 2, "D2", 203},
+            {"S1020", "Lamia Bensaid", 3, "D2", 203},
+            {"S1021", "Bilal Mansour", 1, "D2", 204},
+            {"S1022", "Yasmine Abbas", 2, "D2", 204},
+            {"S1023", "Hugo Martin", 3, "D2", 205},
+            {"S1024", "Claire Dubois", 4, "D2", 205},
+            {"S1025", "Amel Ghazi", 1, nullptr, 0},
+            {"S1026", "Tariq Salhi", 2, nullptr, 0},
+            {"S1027", "Meriem Lounis", 3, nullptr, 0},
+            {"S1028", "Sofiane Haddar", 4, nullptr, 0},
+            {"S1029", "Elena Rossi", 2, nullptr, 0},
+            {"S1030", "Noah Laurent", 1, nullptr, 0},
+        };
+    }
+
+    static QVector<ExampleMenuSeed> exampleMenuSeeds()
+    {
+        return {
+            {0, "D1", "Coffee, eggs, and toast", "Chicken rice bowl with salad", "Lentil soup and grilled vegetables"},
+            {0, "D2", "Mint tea, msemen, and yogurt", "Couscous with vegetables", "Vegetable stew with bread"},
+            {1, "D1", "Oatmeal with dates and milk", "Turkey sandwich with tomato soup", "Pasta primavera and fruit"},
+            {1, "D2", "Croissants, jam, and orange juice", "Beef tagine with rice", "Chickpea salad and baked potatoes"},
+            {2, "D1", "Cheese omelet and fruit", "Tuna pasta salad", "Roast chicken with carrots"},
+            {2, "D2", "Baghrir, honey, and milk", "Lentil dal with flatbread", "Fish fillet with herb rice"},
+            {3, "D1", "Greek yogurt with granola", "Beef kofta wrap", "Tomato soup with grilled cheese"},
+            {3, "D2", "Scrambled eggs and baguette", "Chicken couscous", "Vegetable lasagna"},
+            {4, "D1", "Pancakes with banana", "Falafel bowl with hummus", "Beef stew with potatoes"},
+            {4, "D2", "Coffee, toast, and cheese", "Grilled chicken salad", "Harira soup and dates"},
+            {5, "D1", "Breakfast burrito", "Salmon rice plate", "Mushroom risotto"},
+            {5, "D2", "Semolina porridge and fruit", "Pasta bolognese", "Stuffed peppers and salad"},
+            {6, "D1", "French toast and berries", "Chicken shawarma plate", "Vegetable curry with rice"},
+            {6, "D2", "Boiled eggs, olives, and bread", "Lamb meatballs with couscous", "Spinach quiche and soup"},
+            {7, "D1", "Avocado toast and boiled egg", "Pesto pasta with chicken", "Black bean chili and cornbread"},
+            {7, "D2", "Milk, cereal, and apple slices", "Shrimp rice skillet", "Roasted vegetable couscous"},
+            {8, "D1", "Fruit smoothie and muffin", "Chicken caesar wrap", "Baked fish with green beans"},
+            {8, "D2", "Omelet with peppers", "Vegetarian tajine", "Creamy tomato pasta"},
+            {9, "D1", "Toast, jam, and yogurt", "Beef burger with salad", "Chicken noodle soup"},
+            {9, "D2", "Dates, bread, and labneh", "Rice with chickpeas and vegetables", "Turkey meatloaf with mash"},
+        };
     }
 
     QJsonObject appStateToJson() const
@@ -1144,6 +1279,23 @@ public:
     bool hasStudentForTest(const QString &studentId) const
     {
         return m_university.hasStudent(studentId);
+    }
+
+    bool hasRichExampleSeedDataForTest() const
+    {
+        if (m_university.students().size() < 20) {
+            return false;
+        }
+
+        const QDate today = QDate::currentDate();
+        for (const QString &dormitoryId : {QStringLiteral("D1"), QStringLiteral("D2")}) {
+            for (int offset = 0; offset < 7; ++offset) {
+                if (!m_university.dormitory(dormitoryId).restaurant().menuForDate(today.addDays(offset)).has_value()) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
 private:
@@ -3109,6 +3261,16 @@ int main(int argc, char *argv[])
         first.addPersistenceProbeForTest();
         DormitoryWindow second(testDataPath);
         return second.hasStudentForTest("S9999") ? 0 : 1;
+    }
+
+    if (QCoreApplication::arguments().contains("--seed-data-self-test")) {
+        QTemporaryDir tempDir;
+        if (!tempDir.isValid()) {
+            return 1;
+        }
+        const QString testDataPath = QDir(tempDir.path()).filePath("udrms-data.json");
+        DormitoryWindow seeded(testDataPath);
+        return seeded.hasRichExampleSeedDataForTest() ? 0 : 1;
     }
 
     DormitoryWindow window(dataFilePath);
