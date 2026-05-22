@@ -5,6 +5,7 @@ project(UDRMS LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
@@ -39,7 +40,7 @@ target_compile_options(udrms_tests PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W4>
 )
 
-add_executable(udrms_gui WIN32 src/gui_main.cpp)
+add_executable(udrms_gui WIN32 src/gui_main.cpp resources/dormora_icons.qrc)
 target_link_libraries(udrms_gui PRIVATE udrms_backend Qt6::Widgets)
 target_compile_options(udrms_gui PRIVATE
     $<$<CXX_COMPILER_ID:GNU,Clang>:-Wall -Wextra -Wpedantic>
@@ -51,5 +52,7 @@ add_test(NAME backend_tests COMMAND udrms_tests)
 add_test(NAME gui_smoke_test COMMAND udrms_gui --smoke-test)
 add_test(NAME gui_persistence_test COMMAND udrms_gui --persistence-self-test)
 add_test(NAME gui_seed_data_test COMMAND udrms_gui --seed-data-self-test)
+add_test(NAME gui_dropdown_test COMMAND udrms_gui --dropdown-self-test)
 set_tests_properties(gui_persistence_test PROPERTIES TIMEOUT 5)
 set_tests_properties(gui_seed_data_test PROPERTIES TIMEOUT 5)
+set_tests_properties(gui_dropdown_test PROPERTIES TIMEOUT 5)

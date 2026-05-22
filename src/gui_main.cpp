@@ -18,6 +18,7 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListView>
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QMouseEvent>
@@ -299,6 +300,37 @@ QLineEdit, QComboBox, QSpinBox, QDateEdit {
     border-radius: 8px;
     padding: 8px 12px;
     min-height: 30px;
+}
+QComboBox, QDateEdit {
+    padding: 8px 36px 8px 12px;
+}
+QComboBox::drop-down, QDateEdit::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 30px;
+    border-left: 1px solid #DDE8E2;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+    background: #F6FAF8;
+}
+QComboBox::down-arrow, QDateEdit::down-arrow {
+    image: url(:/icons/chevron-down.svg);
+    width: 12px;
+    height: 12px;
+}
+QComboBox QAbstractItemView {
+    background: white;
+    border: 1px solid #C9DED3;
+    border-radius: 8px;
+    padding: 4px;
+    selection-background-color: #E6F4EE;
+    selection-color: #123D32;
+    outline: 0;
+}
+QComboBox QAbstractItemView::item {
+    min-height: 28px;
+    padding: 6px 10px;
+    border-radius: 6px;
 }
 QTableWidget {
     background: white;
@@ -640,6 +672,8 @@ private:
     QSpinBox *m_academicYearInput = nullptr;
     QComboBox *m_assignStudentInput = nullptr;
     QComboBox *m_assignDormitoryInput = nullptr;
+    QComboBox *m_profileAssignDormitoryInput = nullptr;
+    QSpinBox *m_profileAssignRoomInput = nullptr;
     QSpinBox *m_assignRoomInput = nullptr;
 
     QComboBox *m_menuDormitoryInput = nullptr;
@@ -1328,6 +1362,43 @@ public:
         return true;
     }
 
+    bool dropdownsHealthyForTest() const
+    {
+        const QVector<QComboBox *> combos = {
+            m_studentFilterInput,
+            m_studentYearFilterInput,
+            m_studentDormitoryFilterInput,
+            m_profileAssignDormitoryInput,
+            m_menuDormitoryInput,
+            m_copyNeighborhoodInput,
+            m_adminAccessInput,
+            m_neighborhoodAccessInput,
+        };
+        for (QComboBox *combo : combos) {
+            if (combo == nullptr || combo->property("polishedDropdown").toBool() != true || combo->count() == 0) {
+                return false;
+            }
+        }
+        return m_studentFilterInput->count() == 3
+            && m_studentYearFilterInput->count() >= 5
+            && m_studentDormitoryFilterInput->count() >= 3
+            && m_profileAssignDormitoryInput->count() >= 2
+            && m_menuDormitoryInput->count() >= 2
+            && m_copyNeighborhoodInput->count() >= 2
+            && m_adminAccessInput->count() >= 3
+            && m_neighborhoodAccessInput->count() >= 2;
+    }
+
+    void openFirstStudentProfileForTest()
+    {
+        if (m_studentTable != nullptr && m_studentTable->rowCount() > 0) {
+            m_studentTable->selectRow(0);
+            selectStudentFromTable();
+            openSelectedStudentProfile();
+            refreshCombos();
+        }
+    }
+
 private:
     void logout()
     {
@@ -1633,7 +1704,7 @@ private:
         m_neighborhoodIdInput->setPlaceholderText("EAST");
         m_neighborhoodNameInput = new QLineEdit(box);
         m_neighborhoodNameInput->setPlaceholderText("East Campus Neighborhood");
-        m_copyNeighborhoodInput = new QComboBox(box);
+        m_copyNeighborhoodInput = createDropdown(box);
 
         layout->addWidget(fieldLabel("New ID", m_neighborhoodIdInput));
         layout->addWidget(fieldLabel("New Name", m_neighborhoodNameInput));
@@ -1660,8 +1731,8 @@ private:
         layout->setSpacing(10);
         layout->addWidget(classLabel("Admin Access", "cardTitle"));
 
-        m_adminAccessInput = new QComboBox(box);
-        m_neighborhoodAccessInput = new QComboBox(box);
+        m_adminAccessInput = createDropdown(box);
+        m_neighborhoodAccessInput = createDropdown(box);
         layout->addWidget(fieldLabel("Admin", m_adminAccessInput));
         layout->addWidget(fieldLabel("Neighborhood", m_neighborhoodAccessInput));
 
@@ -1776,13 +1847,13 @@ private:
 
         auto *filterRow = new QHBoxLayout();
         filterRow->setSpacing(8);
-        m_studentFilterInput = new QComboBox(box);
+        m_studentFilterInput = createDropdown(box);
         m_studentFilterInput->addItem("All students", "all");
         m_studentFilterInput->addItem("Assigned only", "assigned");
         m_studentFilterInput->addItem("Unassigned only", "unassigned");
-        m_studentYearFilterInput = new QComboBox(box);
+        m_studentYearFilterInput = createDropdown(box);
         m_studentYearFilterInput->addItem("Any year", 0);
-        m_studentDormitoryFilterInput = new QComboBox(box);
+        m_studentDormitoryFilterInput = createDropdown(box);
         m_studentDormitoryFilterInput->addItem("Any dormitory", "all");
         auto *clearSearch = new QPushButton("Clear", box);
         filterRow->addWidget(m_studentFilterInput, 1);
@@ -1915,13 +1986,13 @@ private:
         connect(deleteButton, &QPushButton::clicked, this, [this] { deleteSelectedStudent(); });
 
         profileLayout->addWidget(classLabel("Accommodation Actions", "cardTitle"));
-        m_assignDormitoryInput = new QComboBox(box);
-        m_assignDormitoryInput->setFixedHeight(32);
-        m_assignRoomInput = new QSpinBox(box);
-        m_assignRoomInput->setRange(1, 9999);
-        m_assignRoomInput->setFixedHeight(32);
-        profileLayout->addWidget(fieldLabel("Dormitory", m_assignDormitoryInput));
-        profileLayout->addWidget(fieldLabel("Room Number", m_assignRoomInput));
+        m_profileAssignDormitoryInput = createDropdown(box);
+        m_profileAssignDormitoryInput->setMinimumHeight(36);
+        m_profileAssignRoomInput = new QSpinBox(box);
+        m_profileAssignRoomInput->setRange(1, 9999);
+        m_profileAssignRoomInput->setFixedHeight(36);
+        profileLayout->addWidget(fieldLabel("Dormitory", m_profileAssignDormitoryInput));
+        profileLayout->addWidget(fieldLabel("Room Number", m_profileAssignRoomInput));
 
         auto *actionRow = new QHBoxLayout();
         actionRow->setSpacing(8);
@@ -1936,7 +2007,7 @@ private:
         profileLayout->addLayout(actionRow);
         connect(assign, &QPushButton::clicked, this, [this] { assignSelectedStudent(); });
         connect(remove, &QPushButton::clicked, this, [this] { removeSelectedAssignment(); });
-        connect(m_assignDormitoryInput, &QComboBox::currentIndexChanged, this, [this] { updateSuggestedRoomNumber(); });
+        connect(m_profileAssignDormitoryInput, &QComboBox::currentIndexChanged, this, [this] { updateSuggestedRoomNumber(); });
         m_profileStatusLabel = classLabel("", "muted");
         m_profileStatusLabel->setWordWrap(true);
         profileLayout->addWidget(m_profileStatusLabel);
@@ -1978,8 +2049,8 @@ private:
         layout->setContentsMargins(20, 18, 20, 20);
         layout->setSpacing(10);
         layout->addWidget(classLabel("Room Allocation", "cardTitle"));
-        m_assignStudentInput = new QComboBox(box);
-        m_assignDormitoryInput = new QComboBox(box);
+        m_assignStudentInput = createDropdown(box);
+        m_assignDormitoryInput = createDropdown(box);
         m_assignRoomInput = new QSpinBox(box);
         m_assignRoomInput->setRange(1, 9999);
         layout->addWidget(fieldLabel("Student", m_assignStudentInput));
@@ -2008,7 +2079,7 @@ private:
         layout->setContentsMargins(20, 18, 20, 20);
         layout->setSpacing(10);
         layout->addWidget(classLabel("Daily Menu Editor", "cardTitle"));
-        m_menuDormitoryInput = new QComboBox(box);
+        m_menuDormitoryInput = createDropdown(box);
         m_menuDateInput = new QDateEdit(QDate::currentDate(), box);
         m_menuDateInput->setCalendarPopup(true);
         m_breakfastInput = new QLineEdit(box);
@@ -2041,6 +2112,22 @@ private:
         layout->addWidget(classLabel(name, "muted"));
         layout->addWidget(input);
         return wrap;
+    }
+
+    QComboBox *createDropdown(QWidget *parent, const QString &placeholder = {})
+    {
+        auto *combo = new QComboBox(parent);
+        combo->setObjectName("polishedDropdown");
+        combo->setProperty("polishedDropdown", true);
+        combo->setMinimumHeight(40);
+        combo->setMaxVisibleItems(12);
+        combo->setMinimumContentsLength(16);
+        combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+        combo->setView(new QListView(combo));
+        if (!placeholder.isEmpty()) {
+            combo->setPlaceholderText(placeholder);
+        }
+        return combo;
     }
 
     QLabel *classLabel(const QString &text, const QString &className)
@@ -2316,11 +2403,11 @@ private:
             if (student.isAssigned()) {
                 throw DomainError("Remove this student's current room before assigning a new one.");
             }
-            const QString dormitoryId = m_assignDormitoryInput->currentData().toString();
+            const QString dormitoryId = m_profileAssignDormitoryInput->currentData().toString();
             if (!currentAdminCanAccessDormitory(dormitoryId)) {
                 throw DomainError("This admin cannot assign students in that dormitory.");
             }
-            m_university.assignStudentToRoom(student.id(), dormitoryId, m_assignRoomInput->value());
+            m_university.assignStudentToRoom(student.id(), dormitoryId, m_profileAssignRoomInput->value());
             setStudentPanelMessage("Student assigned to room.");
         });
     }
@@ -2813,6 +2900,7 @@ private:
     {
         const QString selectedStudent = m_assignStudentInput == nullptr ? QString() : m_assignStudentInput->currentData().toString();
         const QString selectedDormitory = m_assignDormitoryInput == nullptr ? QString() : m_assignDormitoryInput->currentData().toString();
+        const QString selectedProfileDormitory = m_profileAssignDormitoryInput == nullptr ? QString() : m_profileAssignDormitoryInput->currentData().toString();
         const QString selectedMenuDormitory = m_menuDormitoryInput == nullptr ? QString() : m_menuDormitoryInput->currentData().toString();
 
         if (m_assignStudentInput != nullptr) {
@@ -2826,6 +2914,9 @@ private:
         if (m_assignDormitoryInput != nullptr) {
             m_assignDormitoryInput->clear();
         }
+        if (m_profileAssignDormitoryInput != nullptr) {
+            m_profileAssignDormitoryInput->clear();
+        }
         if (m_menuDormitoryInput != nullptr) {
             m_menuDormitoryInput->clear();
         }
@@ -2834,12 +2925,18 @@ private:
             if (m_assignDormitoryInput != nullptr) {
                 m_assignDormitoryInput->addItem(labelText, dormitory.id());
             }
+            if (m_profileAssignDormitoryInput != nullptr) {
+                m_profileAssignDormitoryInput->addItem(labelText, dormitory.id());
+            }
             if (m_menuDormitoryInput != nullptr) {
                 m_menuDormitoryInput->addItem(labelText, dormitory.id());
             }
         }
         if (m_assignDormitoryInput != nullptr) {
             selectComboData(m_assignDormitoryInput, selectedDormitory);
+        }
+        if (m_profileAssignDormitoryInput != nullptr) {
+            selectComboData(m_profileAssignDormitoryInput, selectedProfileDormitory);
         }
         if (m_menuDormitoryInput != nullptr) {
             selectComboData(m_menuDormitoryInput, selectedMenuDormitory);
@@ -2849,16 +2946,22 @@ private:
 
     void updateSuggestedRoomNumber()
     {
-        if (m_assignDormitoryInput == nullptr || m_assignRoomInput == nullptr) {
+        setSuggestedRoomNumber(m_assignDormitoryInput, m_assignRoomInput);
+        setSuggestedRoomNumber(m_profileAssignDormitoryInput, m_profileAssignRoomInput);
+    }
+
+    void setSuggestedRoomNumber(QComboBox *dormitoryInput, QSpinBox *roomInput)
+    {
+        if (dormitoryInput == nullptr || roomInput == nullptr) {
             return;
         }
-        const QString dormitoryId = m_assignDormitoryInput->currentData().toString();
+        const QString dormitoryId = dormitoryInput->currentData().toString();
         if (dormitoryId.isEmpty()) {
             return;
         }
         const QVector<Room> rooms = m_university.dormitory(dormitoryId).availableRooms();
         if (!rooms.isEmpty()) {
-            m_assignRoomInput->setValue(rooms.first().number());
+            roomInput->setValue(rooms.first().number());
         }
     }
 
@@ -3043,9 +3146,12 @@ private:
         dialogLayout->setContentsMargins(18, 18, 18, 18);
         dialogLayout->setSpacing(12);
         dialogLayout->addWidget(buildStudentProfileCard(), 1);
+        refreshCombos();
 
         connect(m_studentProfileDialog, &QDialog::finished, this, [this] {
             m_studentProfileDialog = nullptr;
+            m_profileAssignDormitoryInput = nullptr;
+            m_profileAssignRoomInput = nullptr;
             m_studentProfileDirty = false;
         });
         updateSelectedStudentProfile();
@@ -3105,11 +3211,11 @@ private:
     {
         m_profileNameInput->setEnabled(enabled);
         m_profileYearInput->setEnabled(enabled);
-        if (m_assignDormitoryInput != nullptr) {
-            m_assignDormitoryInput->setEnabled(enabled);
+        if (m_profileAssignDormitoryInput != nullptr) {
+            m_profileAssignDormitoryInput->setEnabled(enabled);
         }
-        if (m_assignRoomInput != nullptr) {
-            m_assignRoomInput->setEnabled(enabled);
+        if (m_profileAssignRoomInput != nullptr) {
+            m_profileAssignRoomInput->setEnabled(enabled);
         }
     }
 
@@ -3301,6 +3407,19 @@ int main(int argc, char *argv[])
         const QString testDataPath = QDir(tempDir.path()).filePath("udrms-data.json");
         DormitoryWindow seeded(testDataPath);
         return seeded.hasRichExampleSeedDataForTest() ? 0 : 1;
+    }
+
+    if (QCoreApplication::arguments().contains("--dropdown-self-test")) {
+        QTemporaryDir tempDir;
+        if (!tempDir.isValid()) {
+            return 1;
+        }
+        const QString testDataPath = QDir(tempDir.path()).filePath("udrms-data.json");
+        DormitoryWindow dropdownWindow(testDataPath);
+        dropdownWindow.loginAsAdminForTest("admin");
+        dropdownWindow.showPageForTest(1);
+        dropdownWindow.openFirstStudentProfileForTest();
+        return dropdownWindow.dropdownsHealthyForTest() ? 0 : 1;
     }
 
     DormitoryWindow window(dataFilePath);
