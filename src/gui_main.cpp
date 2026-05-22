@@ -4,9 +4,9 @@
 #include <QApplication>
 #include <QButtonGroup>
 #include <QComboBox>
-#include <QCompleter>
 #include <QCoreApplication>
 #include <QDateEdit>
+#include <QDialog>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -33,7 +33,6 @@
 #include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStackedWidget>
-#include <QStringListModel>
 #include <QStatusBar>
 #include <QTableWidget>
 #include <QTimer>
@@ -245,6 +244,19 @@ QPushButton.primary:hover, QPushButton[class="primary"]:hover {
 QPushButton.danger, QPushButton[class="danger"] {
     color: #B42318;
     border-color: #F1B8B3;
+}
+QPushButton#suggestionButton {
+    background: #F6FAF8;
+    border: 1px solid #D9E5DF;
+    border-radius: 8px;
+    color: #13231D;
+    font-weight: 600;
+    padding: 7px 10px;
+    text-align: left;
+}
+QPushButton#suggestionButton:hover {
+    background: #E6F4EE;
+    border-color: #BFD8CD;
 }
 QPushButton:disabled, QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled {
     color: #98A2B3;
@@ -553,9 +565,10 @@ private:
     QComboBox *m_studentFilterInput = nullptr;
     QComboBox *m_studentYearFilterInput = nullptr;
     QComboBox *m_studentDormitoryFilterInput = nullptr;
-    QCompleter *m_studentSearchCompleter = nullptr;
-    QStringListModel *m_studentSearchModel = nullptr;
+    QWidget *m_studentSuggestionPanel = nullptr;
+    QVBoxLayout *m_studentSuggestionList = nullptr;
     QLabel *m_studentCountLabel = nullptr;
+    QDialog *m_studentProfileDialog = nullptr;
     QLabel *m_profileNameLabel = nullptr;
     QLabel *m_profileMetaLabel = nullptr;
     QLabel *m_profileAssignmentLabel = nullptr;
@@ -1165,11 +1178,7 @@ private:
         auto *page = pageContainer("Resident Desk", "Search by student ID or name, then review and modify the selected resident profile.");
         auto *layout = qobject_cast<QVBoxLayout *>(page->layout());
 
-        auto *split = new QHBoxLayout();
-        split->setSpacing(18);
-        split->addWidget(buildStudentSearchCard(), 6);
-        split->addWidget(buildStudentProfileCard(), 5);
-        layout->addLayout(split, 1);
+        layout->addWidget(buildStudentSearchCard(), 1);
 
         return page;
     }
@@ -1379,14 +1388,8 @@ private:
         layout->addLayout(top);
 
         m_studentSearchInput = new QLineEdit(box);
-        m_studentSearchInput->setPlaceholderText("Search by name, student ID, or choose a suggestion");
+        m_studentSearchInput->setPlaceholderText("Search by name or student ID");
         m_studentSearchInput->setMinimumHeight(38);
-        m_studentSearchModel = new QStringListModel(this);
-        m_studentSearchCompleter = new QCompleter(m_studentSearchModel, this);
-        m_studentSearchCompleter->setCaseSensitivity(Qt::CaseInsensitive);
-        m_studentSearchCompleter->setFilterMode(Qt::MatchContains);
-        m_studentSearchCompleter->setCompletionMode(QCompleter::PopupCompletion);
-        m_studentSearchInput->setCompleter(m_studentSearchCompleter);
         layout->addWidget(m_studentSearchInput);
 
         auto *filterRow = new QHBoxLayout();
@@ -1406,46 +1409,41 @@ private:
         filterRow->addWidget(clearSearch);
         layout->addLayout(filterRow);
 
-        auto *tableHint = classLabel("Select a row to open its profile. Double-click or press Enter to focus the profile editor.", "muted");
+        m_studentSuggestionPanel = new QWidget(box);
+        auto *suggestionOuter = new QVBoxLayout(m_studentSuggestionPanel);
+        suggestionOuter->setContentsMargins(0, 0, 0, 0);
+        suggestionOuter->setSpacing(6);
+        suggestionOuter->addWidget(classLabel("Suggested matches", "muted"));
+        m_studentSuggestionList = new QVBoxLayout();
+        m_studentSuggestionList->setContentsMargins(0, 0, 0, 0);
+        m_studentSuggestionList->setSpacing(6);
+        suggestionOuter->addLayout(m_studentSuggestionList);
+        layout->addWidget(m_studentSuggestionPanel);
+        m_studentSuggestionPanel->hide();
+
+        auto *tableHint = classLabel("Select a row, then open the full profile in a separate editor. Double-click a row to open it immediately.", "muted");
         tableHint->setWordWrap(true);
         layout->addWidget(tableHint);
         m_studentTable = new QTableWidget(box);
         setupTable(m_studentTable, {"ID", "Full Name", "Year", "Assignment"});
         applyColumnWeights(m_studentTable, {72, 165, 55, 145});
         m_studentTable->setFocusPolicy(Qt::StrongFocus);
-        m_studentTable->setMinimumHeight(170);
+        m_studentTable->setMinimumHeight(215);
         layout->addWidget(m_studentTable, 1);
 
-        auto *addBox = new QFrame(box);
-        addBox->setObjectName("studentInlinePanel");
-        auto *addLayout = new QVBoxLayout(addBox);
-        addLayout->setContentsMargins(12, 10, 12, 10);
-        addLayout->setSpacing(6);
-        addLayout->addWidget(classLabel("Add Student", "cardTitle"));
-        m_studentIdInput = new QLineEdit(addBox);
-        m_studentIdInput->setPlaceholderText("S1005");
-        m_studentNameInput = new QLineEdit(addBox);
-        m_studentNameInput->setPlaceholderText("Full name");
-        m_academicYearInput = new QSpinBox(addBox);
-        m_academicYearInput->setRange(1, 8);
-        auto *addGrid = new QGridLayout();
-        addGrid->setContentsMargins(0, 0, 0, 0);
-        addGrid->setHorizontalSpacing(10);
-        addGrid->setVerticalSpacing(8);
-        addGrid->addWidget(fieldLabel("Student ID", m_studentIdInput), 0, 0);
-        addGrid->addWidget(fieldLabel("Academic Year", m_academicYearInput), 0, 1);
-        addGrid->addWidget(fieldLabel("Full Name", m_studentNameInput), 1, 0, 1, 2);
-        addLayout->addLayout(addGrid);
-        auto *addButton = new QPushButton("Add student", addBox);
-        addButton->setProperty("class", "primary");
-        addButton->setObjectName("addStudentButton");
-        addLayout->addWidget(addButton);
-        layout->addWidget(addBox);
+        auto *tableActions = new QHBoxLayout();
+        tableActions->setSpacing(8);
+        auto *addButton = new QPushButton("Add student", box);
+        addButton->setMinimumWidth(140);
+        auto *openProfile = new QPushButton("Open profile", box);
+        openProfile->setProperty("class", "primary");
+        openProfile->setMinimumWidth(150);
+        tableActions->addWidget(addButton);
+        tableActions->addStretch();
+        tableActions->addWidget(openProfile);
+        layout->addLayout(tableActions);
 
         connect(m_studentSearchInput, &QLineEdit::textChanged, this, [this] { refreshStudents(); });
-        connect(m_studentSearchCompleter, qOverload<const QString &>(&QCompleter::activated), this, [this](const QString &value) {
-            openStudentFromSearch(value);
-        });
         connect(m_studentSearchInput, &QLineEdit::returnPressed, this, [this] {
             openStudentFromSearch(m_studentSearchInput->text());
         });
@@ -1462,13 +1460,11 @@ private:
         connect(m_studentTable, &QTableWidget::itemActivated, this, [this](QTableWidgetItem *item) {
             if (item != nullptr) {
                 selectStudentFromTable();
-                if (m_profileNameInput != nullptr) {
-                    m_profileNameInput->setFocus();
-                    m_profileNameInput->selectAll();
-                }
+                openSelectedStudentProfile();
             }
         });
-        connect(addButton, &QPushButton::clicked, this, [this] { addStudent(); });
+        connect(openProfile, &QPushButton::clicked, this, [this] { openSelectedStudentProfile(); });
+        connect(addButton, &QPushButton::clicked, this, [this] { openAddStudentDialog(); });
         return box;
     }
 
@@ -1802,6 +1798,71 @@ private:
             m_studentNameInput->clear();
             setStudentPanelMessage("Student added.");
         });
+    }
+
+    void openAddStudentDialog()
+    {
+        QDialog dialog(this);
+        dialog.setWindowTitle("Add Student");
+        dialog.setModal(true);
+        dialog.resize(460, 300);
+
+        auto *layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(20, 18, 20, 18);
+        layout->setSpacing(12);
+        layout->addWidget(classLabel("Add Student", "cardTitle"));
+
+        auto *idInput = new QLineEdit(&dialog);
+        idInput->setPlaceholderText(nextStudentId());
+        auto *nameInput = new QLineEdit(&dialog);
+        nameInput->setPlaceholderText("Full name");
+        auto *yearInput = new QSpinBox(&dialog);
+        yearInput->setRange(1, 8);
+        yearInput->setValue(1);
+        layout->addWidget(fieldLabel("Student ID", idInput));
+        layout->addWidget(fieldLabel("Full Name", nameInput));
+        layout->addWidget(fieldLabel("Academic Year", yearInput));
+
+        auto *status = classLabel("", "muted");
+        status->setStyleSheet("color: #B42318;");
+        layout->addWidget(status);
+
+        auto *actions = new QHBoxLayout();
+        actions->addStretch();
+        auto *cancel = new QPushButton("Cancel", &dialog);
+        auto *save = new QPushButton("Add student", &dialog);
+        save->setProperty("class", "primary");
+        actions->addWidget(cancel);
+        actions->addWidget(save);
+        layout->addLayout(actions);
+
+        connect(cancel, &QPushButton::clicked, &dialog, &QDialog::reject);
+        connect(save, &QPushButton::clicked, &dialog, [this, &dialog, idInput, nameInput, yearInput, status] {
+            const QString newStudentId = idInput->text().trimmed().isEmpty()
+                ? nextStudentId()
+                : idInput->text().trimmed().toUpper();
+            const QString fullName = nameInput->text().trimmed();
+            if (newStudentId.isEmpty() || fullName.isEmpty()) {
+                status->setText("Student ID and full name are required.");
+                return;
+            }
+
+            try {
+                m_university.addStudent(Student(newStudentId, fullName, yearInput->value()));
+                m_selectedStudentId = newStudentId;
+                saveAppState();
+                refreshAll();
+                if (m_studentSearchInput != nullptr) {
+                    m_studentSearchInput->setText(newStudentId);
+                }
+                selectStudentRow(newStudentId);
+                dialog.accept();
+            } catch (const DomainError &error) {
+                status->setText(error.what());
+            }
+        });
+
+        dialog.exec();
     }
 
     void saveSelectedStudent()
@@ -2192,21 +2253,44 @@ private:
         }
     }
 
-    void refreshStudentSearchOptions()
+    void refreshStudentSearchSuggestions()
     {
-        if (m_studentSearchModel == nullptr) {
+        if (m_studentSuggestionPanel == nullptr || m_studentSuggestionList == nullptr || m_studentSearchInput == nullptr) {
             return;
         }
 
-        QStringList suggestions;
-        for (const Student &student : visibleStudents()) {
-            suggestions.append(student.id() + " - " + student.fullName());
-            suggestions.append(student.id());
-            suggestions.append(student.fullName());
+        clearLayout(m_studentSuggestionList);
+        const QString query = m_studentSearchInput->text().trimmed().toLower();
+        if (query.size() < 2) {
+            m_studentSuggestionPanel->hide();
+            return;
         }
-        suggestions.removeDuplicates();
-        suggestions.sort(Qt::CaseInsensitive);
-        m_studentSearchModel->setStringList(suggestions);
+
+        int shown = 0;
+        for (const Student &student : visibleStudents()) {
+            const QString labelText = student.id() + " - " + student.fullName()
+                + (student.isAssigned() ? " | " + assignmentText(student) : " | Unassigned");
+            if (!student.id().toLower().contains(query)
+                && !student.fullName().toLower().contains(query)
+                && !labelText.toLower().contains(query)) {
+                continue;
+            }
+
+            auto *button = new QPushButton(labelText, m_studentSuggestionPanel);
+            button->setObjectName("suggestionButton");
+            button->setProperty("studentId", student.id());
+            button->setMinimumHeight(32);
+            button->setCursor(Qt::PointingHandCursor);
+            connect(button, &QPushButton::clicked, this, [this, id = student.id()] {
+                openStudentFromSearch(id);
+            });
+            m_studentSuggestionList->addWidget(button);
+            ++shown;
+            if (shown == 4) {
+                break;
+            }
+        }
+        m_studentSuggestionPanel->setVisible(shown > 0);
     }
 
     void refreshStudentFilterOptions()
@@ -2263,8 +2347,8 @@ private:
         if (m_studentTable == nullptr) {
             return;
         }
-        refreshStudentSearchOptions();
         refreshStudentFilterOptions();
+        refreshStudentSearchSuggestions();
         m_studentTable->setRowCount(0);
         const QString query = normalizedStudentSearchQuery();
         const QString filter = m_studentFilterInput == nullptr ? QStringLiteral("all") : m_studentFilterInput->currentData().toString();
@@ -2551,7 +2635,39 @@ private:
         }
         refreshStudents();
         selectStudentRow(studentId);
+        m_studentSuggestionPanel->hide();
+        openSelectedStudentProfile();
+    }
+
+    void openSelectedStudentProfile()
+    {
+        if (m_selectedStudentId.isEmpty() || !m_university.hasStudent(m_selectedStudentId)) {
+            QMessageBox::information(this, "Open profile", "Select a student first.");
+            return;
+        }
+        if (m_studentProfileDialog != nullptr && m_studentProfileDialog->isVisible()) {
+            m_studentProfileDialog->raise();
+            m_studentProfileDialog->activateWindow();
+            return;
+        }
+
+        m_studentProfileDialog = new QDialog(this);
+        m_studentProfileDialog->setWindowTitle("Student Profile - " + m_selectedStudentId);
+        m_studentProfileDialog->setModal(false);
+        m_studentProfileDialog->resize(760, 640);
+        m_studentProfileDialog->setMinimumSize(680, 560);
+
+        auto *dialogLayout = new QVBoxLayout(m_studentProfileDialog);
+        dialogLayout->setContentsMargins(18, 18, 18, 18);
+        dialogLayout->setSpacing(12);
+        dialogLayout->addWidget(buildStudentProfileCard(), 1);
+
+        connect(m_studentProfileDialog, &QDialog::finished, this, [this] {
+            m_studentProfileDialog = nullptr;
+            m_studentProfileDirty = false;
+        });
         updateSelectedStudentProfile();
+        m_studentProfileDialog->show();
     }
 
     Student &selectedStudent()
