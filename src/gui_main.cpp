@@ -665,10 +665,10 @@ private:
     };
 
     struct ExampleStudentSeed {
-        const char *id;
-        const char *name;
+        QString id;
+        QString name;
         int year;
-        const char *dormitoryId;
+        QString dormitoryId;
         int roomNumber;
     };
 
@@ -701,13 +701,13 @@ private:
         m_adminProfiles.clear();
         m_studentPortalPassword = "student123";
 
-        Dormitory north("D1", "North Dormitory", 16, Restaurant("North Restaurant"));
-        for (int roomNumber = 101; roomNumber <= 108; ++roomNumber) {
+        Dormitory north("D1", "North Dormitory", 100, Restaurant("North Restaurant"));
+        for (int roomNumber = 101; roomNumber <= 150; ++roomNumber) {
             north.addRoom(Room(roomNumber, 2));
         }
 
-        Dormitory south("D2", "South Dormitory", 16, Restaurant("South Restaurant"));
-        for (int roomNumber = 201; roomNumber <= 208; ++roomNumber) {
+        Dormitory south("D2", "South Dormitory", 100, Restaurant("South Restaurant"));
+        for (int roomNumber = 201; roomNumber <= 250; ++roomNumber) {
             south.addRoom(Room(roomNumber, 2));
         }
 
@@ -741,18 +741,18 @@ private:
     {
         bool changed = false;
         for (const ExampleStudentSeed &seed : exampleStudentSeeds()) {
-            const QString studentId = QString::fromLatin1(seed.id);
+            const QString studentId = seed.id;
             if (!m_university.hasStudent(studentId)) {
-                m_university.addStudent(Student(studentId, QString::fromUtf8(seed.name), seed.year));
+                m_university.addStudent(Student(studentId, seed.name, seed.year));
                 changed = true;
             }
 
-            if (!assignRooms || seed.dormitoryId == nullptr) {
+            if (!assignRooms || seed.dormitoryId.isEmpty()) {
                 continue;
             }
 
             Student &student = m_university.student(studentId);
-            const QString dormitoryId = QString::fromLatin1(seed.dormitoryId);
+            const QString dormitoryId = seed.dormitoryId;
             if (!student.isAssigned()
                 && m_university.hasDormitory(dormitoryId)
                 && m_university.dormitory(dormitoryId).hasRoom(seed.roomNumber)
@@ -791,7 +791,7 @@ private:
 
     static QVector<ExampleStudentSeed> exampleStudentSeeds()
     {
-        return {
+        QVector<ExampleStudentSeed> seeds = {
             {"S1001", "Amina Benali", 1, "D1", 101},
             {"S1002", "Karim Haddad", 2, "D1", 101},
             {"S1003", "Lina Saadi", 3, "D1", 102},
@@ -816,13 +816,43 @@ private:
             {"S1022", "Yasmine Abbas", 2, "D2", 204},
             {"S1023", "Hugo Martin", 3, "D2", 205},
             {"S1024", "Claire Dubois", 4, "D2", 205},
-            {"S1025", "Amel Ghazi", 1, nullptr, 0},
-            {"S1026", "Tariq Salhi", 2, nullptr, 0},
-            {"S1027", "Meriem Lounis", 3, nullptr, 0},
-            {"S1028", "Sofiane Haddar", 4, nullptr, 0},
-            {"S1029", "Elena Rossi", 2, nullptr, 0},
-            {"S1030", "Noah Laurent", 1, nullptr, 0},
+            {"S1025", "Amel Ghazi", 1, {}, 0},
+            {"S1026", "Tariq Salhi", 2, {}, 0},
+            {"S1027", "Meriem Lounis", 3, {}, 0},
+            {"S1028", "Sofiane Haddar", 4, {}, 0},
+            {"S1029", "Elena Rossi", 2, {}, 0},
+            {"S1030", "Noah Laurent", 1, {}, 0},
         };
+
+        static constexpr const char *firstNames[] = {
+            "Adel", "Sofia", "Malik", "Nora", "Ibrahim", "Lina", "Nassim", "Aya",
+            "Farid", "Dalia", "Younes", "Mina", "Samy", "Rim", "Khaled", "Lara",
+            "Anis", "Celia", "Taha", "Hana",
+        };
+        static constexpr const char *lastNames[] = {
+            "Belaid", "Haddad", "Mokrani", "Saadi", "Kacem", "Bouzid", "Rahmani", "Cherif",
+            "Ferhat", "Toumi", "Bensaid", "Zeroual", "Amrani", "Mansouri", "Ouali", "Brahimi",
+            "Lounis", "Abbassi", "Meziane", "Taleb",
+        };
+
+        for (int number = 1031; number <= 1100; ++number) {
+            const int index = number - 1031;
+            const QString id = "S" + QString::number(number);
+            const QString fullName = QString::fromLatin1(firstNames[index % 20])
+                + " " + QString::fromLatin1(lastNames[(index * 7) % 20]);
+            const bool northCampus = index % 2 == 0;
+            const QString dormitoryId = northCampus ? QStringLiteral("D1") : QStringLiteral("D2");
+            const int roomNumber = (northCampus ? 109 : 209) + (index / 4);
+            seeds.append({
+                id,
+                fullName,
+                (index % 4) + 1,
+                dormitoryId,
+                roomNumber,
+            });
+        }
+
+        return seeds;
     }
 
     static QVector<ExampleMenuSeed> exampleMenuSeeds()
@@ -1283,7 +1313,7 @@ public:
 
     bool hasRichExampleSeedDataForTest() const
     {
-        if (m_university.students().size() < 20) {
+        if (m_university.students().size() < 100) {
             return false;
         }
 
