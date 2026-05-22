@@ -16,6 +16,7 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QIcon>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListView>
@@ -27,6 +28,7 @@
 #include <QJsonObject>
 #include <QPropertyAnimation>
 #include <QPushButton>
+#include <QPixmap>
 #include <QShortcut>
 #include <QSaveFile>
 #include <QScreen>
@@ -168,24 +170,13 @@ QLabel#brandSub {
     font-weight: 600;
 }
 QFrame#brandMark {
-    background: #F6C76B;
-    border: 2px solid rgba(255,255,255,0.40);
-    border-radius: 16px;
-    min-width: 42px;
-    max-width: 42px;
-    min-height: 42px;
-    max-height: 42px;
-}
-QLabel#brandMarkLetter {
-    color: #123D32;
-    font-size: 22px;
-    font-weight: 900;
-}
-QFrame#brandMiniLine {
-    background: #123D32;
-    border-radius: 2px;
-    min-height: 4px;
-    max-height: 4px;
+    background: #F7FAF8;
+    border: 1px solid rgba(255,255,255,0.45);
+    border-radius: 25px;
+    min-width: 50px;
+    max-width: 50px;
+    min-height: 50px;
+    max-height: 50px;
 }
 QLabel#loginBadge {
     background: rgba(255,255,255,0.12);
@@ -414,15 +405,13 @@ QFrame *brandMark(QWidget *parent = nullptr)
     auto *mark = new QFrame(parent);
     mark->setObjectName("brandMark");
     auto *layout = new QVBoxLayout(mark);
-    layout->setContentsMargins(8, 6, 8, 7);
-    layout->setSpacing(3);
-    auto *letter = new QLabel("D", mark);
-    letter->setObjectName("brandMarkLetter");
-    letter->setAlignment(Qt::AlignCenter);
-    layout->addWidget(letter, 1);
-    auto *line = new QFrame(mark);
-    line->setObjectName("brandMiniLine");
-    layout->addWidget(line);
+    layout->setContentsMargins(3, 3, 3, 3);
+    auto *logo = new QLabel(mark);
+    logo->setAlignment(Qt::AlignCenter);
+    logo->setPixmap(QPixmap(":/icons/dormora-logo.svg").scaled(44, 44, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    logo->setMinimumSize(44, 44);
+    logo->setMaximumSize(44, 44);
+    layout->addWidget(logo);
     return mark;
 }
 
@@ -564,6 +553,7 @@ public:
         connect(fullscreenShortcut, &QShortcut::activated, this, [this] { toggleFullScreen(); });
         buildLoginUi();
         setWindowTitle("Dormora");
+        setWindowIcon(QIcon(":/icons/dormora-logo.svg"));
         resize(1280, 780);
         setMinimumSize(980, 620);
     }
