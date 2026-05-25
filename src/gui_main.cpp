@@ -9,6 +9,7 @@
 #include <QDialog>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QEvent>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
@@ -41,6 +42,7 @@
 #include <QSpinBox>
 #include <QStackedWidget>
 #include <QStatusBar>
+#include <QStyle>
 #include <QTableWidget>
 #include <QTimer>
 #include <QTemporaryDir>
@@ -65,68 +67,98 @@ QMainWindow {
 QFrame#windowChrome {
     background: #F7FAF8;
     border: 1px solid #C9DED3;
-    border-radius: 22px;
+    border-radius: 12px;
+}
+QFrame#windowChrome[fullscreenChrome="true"] {
+    border: none;
+    border-radius: 0;
 }
 QWidget#appRoot, QWidget#loginRoot {
     background: #F7FAF8;
-    border-radius: 21px;
+    border-radius: 11px;
+}
+QWidget#appRoot[fullscreenChrome="true"], QWidget#loginRoot[fullscreenChrome="true"] {
+    border-radius: 0;
 }
 QWidget#studentRoot {
     background: #FFFCF7;
-    border-radius: 21px;
+    border-radius: 11px;
+}
+QWidget#studentRoot[fullscreenChrome="true"] {
+    border-radius: 0;
 }
 QWidget#contentPane {
     background: #F7FAF8;
-    border-top-right-radius: 21px;
-    border-bottom-right-radius: 21px;
+    border-top-right-radius: 11px;
+    border-bottom-right-radius: 11px;
+}
+QWidget#contentPane[fullscreenChrome="true"] {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 QWidget#studentContentPane {
     background: #FFFCF7;
-    border-top-right-radius: 21px;
-    border-bottom-right-radius: 21px;
+    border-top-right-radius: 11px;
+    border-bottom-right-radius: 11px;
+}
+QWidget#studentContentPane[fullscreenChrome="true"] {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 QFrame#titleControls {
-    background: transparent;
-    border: none;
+    background: rgba(18,61,50,0.06);
+    border: 1px solid rgba(18,61,50,0.08);
+    border-radius: 11px;
+    padding: 3px;
 }
 QPushButton#windowButton {
-    background: rgba(15,81,50,0.08);
+    background: transparent;
+    color: #315B4A;
     border: none;
-    border-radius: 13px;
-    min-width: 26px;
-    max-width: 26px;
-    min-height: 26px;
-    max-height: 26px;
+    border-radius: 8px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
     padding: 0;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 700;
 }
 QPushButton#windowButton:hover {
-    background: rgba(25,135,84,0.18);
+    background: rgba(25,135,84,0.14);
+    color: #123D32;
+}
+QPushButton#windowButton:pressed {
+    background: rgba(25,135,84,0.24);
 }
 QPushButton#windowButtonWide {
-    background: rgba(15,81,50,0.08);
+    background: transparent;
+    color: #315B4A;
     border: none;
-    border-radius: 13px;
-    min-width: 42px;
-    max-width: 42px;
-    min-height: 26px;
-    max-height: 26px;
+    border-radius: 8px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
     padding: 0;
-    font-weight: 800;
+    font-size: 14px;
+    font-weight: 700;
 }
 QPushButton#windowButtonWide:hover {
-    background: rgba(25,135,84,0.18);
+    background: rgba(25,135,84,0.14);
+    color: #123D32;
 }
 QPushButton#closeButton {
-    background: rgba(180,35,24,0.10);
+    background: transparent;
     color: #B42318;
     border: none;
-    border-radius: 13px;
-    min-width: 26px;
-    max-width: 26px;
-    min-height: 26px;
-    max-height: 26px;
+    border-radius: 8px;
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
     padding: 0;
+    font-size: 15px;
     font-weight: 800;
 }
 QPushButton#closeButton:hover {
@@ -136,14 +168,22 @@ QPushButton#closeButton:hover {
 QFrame#sidebar {
     background: #123D32;
     border: none;
-    border-top-left-radius: 21px;
-    border-bottom-left-radius: 21px;
+    border-top-left-radius: 11px;
+    border-bottom-left-radius: 11px;
+}
+QFrame#sidebar[fullscreenChrome="true"] {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 QFrame#studentSidebar {
     background: #2F5145;
     border: none;
-    border-top-left-radius: 21px;
-    border-bottom-left-radius: 21px;
+    border-top-left-radius: 11px;
+    border-bottom-left-radius: 11px;
+}
+QFrame#studentSidebar[fullscreenChrome="true"] {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 QPushButton#sidebarToggle {
     background: rgba(255,255,255,0.10);
@@ -159,8 +199,12 @@ QPushButton#sidebarToggle:hover {
 }
 QFrame#loginBrand {
     background: #123D32;
-    border-top-left-radius: 21px;
-    border-bottom-left-radius: 21px;
+    border-top-left-radius: 11px;
+    border-bottom-left-radius: 11px;
+}
+QFrame#loginBrand[fullscreenChrome="true"] {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 QLabel#brand {
     color: white;
@@ -721,6 +765,14 @@ protected:
         QMainWindow::mouseReleaseEvent(event);
     }
 
+    void changeEvent(QEvent *event) override
+    {
+        QMainWindow::changeEvent(event);
+        if (event->type() == QEvent::WindowStateChange) {
+            applyChromeState();
+        }
+    }
+
 private:
     enum class AuthRole {
         None,
@@ -746,6 +798,8 @@ private:
     bool m_enableAnimations = true;
 
     QStackedWidget *m_stack = nullptr;
+    QFrame *m_windowChrome = nullptr;
+    QWidget *m_contentRoot = nullptr;
     QLineEdit *m_loginUserInput = nullptr;
     QLineEdit *m_loginPasswordInput = nullptr;
     QLabel *m_loginFeedback = nullptr;
@@ -1205,6 +1259,7 @@ private:
     void toggleFullScreen()
     {
         isFullScreen() ? showNormal() : showFullScreen();
+        applyChromeState();
     }
 
     void toggleSidebar()
@@ -1219,6 +1274,48 @@ private:
             refreshAll();
         } else if (m_role == AuthRole::Student) {
             buildStudentPortalUi();
+        }
+    }
+
+    void applyChromeState()
+    {
+        const bool fullscreen = isFullScreen();
+        setFullscreenChromeProperty(m_windowChrome, fullscreen);
+        setFullscreenChromeProperty(m_contentRoot, fullscreen);
+    }
+
+    void setFullscreenChromeProperty(QWidget *widget, bool fullscreen)
+    {
+        if (widget == nullptr) {
+            return;
+        }
+
+        auto updateSurface = [fullscreen](QWidget *surface) {
+            surface->setProperty("fullscreenChrome", fullscreen);
+            surface->style()->unpolish(surface);
+            surface->style()->polish(surface);
+            surface->update();
+        };
+        auto shouldUpdate = [](QWidget *surface) {
+            const QString objectName = surface->objectName();
+            return objectName == "windowChrome"
+                || objectName == "appRoot"
+                || objectName == "loginRoot"
+                || objectName == "studentRoot"
+                || objectName == "contentPane"
+                || objectName == "studentContentPane"
+                || objectName == "sidebar"
+                || objectName == "studentSidebar"
+                || objectName == "loginBrand";
+        };
+
+        if (shouldUpdate(widget)) {
+            updateSurface(widget);
+        }
+        for (QWidget *child : widget->findChildren<QWidget *>()) {
+            if (shouldUpdate(child)) {
+                updateSurface(child);
+            }
         }
     }
 
@@ -1309,17 +1406,19 @@ private:
 
         auto *minimize = new QPushButton(QString::fromUtf8("−"), controls);
         minimize->setObjectName("windowButton");
-        minimize->setText("-");
+        minimize->setText(QString(QChar(0x2212)));
         minimize->setToolTip("Minimize");
         auto *close = new QPushButton(QString::fromUtf8("×"), controls);
         close->setObjectName("closeButton");
-        close->setText("X");
+        close->setText(QString(QChar(0x00D7)));
         close->setToolTip("Close");
         auto *maximize = new QPushButton("[]", controls);
         maximize->setObjectName("windowButton");
+        maximize->setText(QString(QChar(0x25A1)));
         maximize->setToolTip("Maximize or restore");
         auto *fullscreen = new QPushButton("F11", controls);
         fullscreen->setObjectName("windowButtonWide");
+        fullscreen->setText(QString(QChar(0x26F6)));
         fullscreen->setToolTip("Toggle full screen");
 
         connect(minimize, &QPushButton::clicked, this, [this] { showMinimized(); });
@@ -1354,6 +1453,8 @@ private:
     {
         auto *chrome = new QFrame(this);
         chrome->setObjectName("windowChrome");
+        m_windowChrome = chrome;
+        m_contentRoot = content;
         auto *layout = new QVBoxLayout(chrome);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(0);
@@ -1365,6 +1466,7 @@ private:
         m_statusLabel->setMaximumHeight(16);
         layout->addWidget(m_statusLabel);
         setCentralWidget(chrome);
+        applyChromeState();
 
         if (!m_enableAnimations) {
             return;
@@ -3568,6 +3670,10 @@ int main(int argc, char *argv[])
     }
     if (arguments.contains("--collapse-sidebar")) {
         window.collapseSidebarForTest();
+    }
+    if (arguments.contains("--fullscreen")) {
+        window.showFullScreen();
+        app.processEvents();
     }
     if (smokeTest) {
         return 0;
