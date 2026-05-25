@@ -57,7 +57,7 @@ namespace {
 
 const char *kAppStyle = R"(
 * {
-    font-family: "Segoe UI", Arial, sans-serif;
+    font-family: "Times New Roman", Times, serif;
     font-size: 13px;
     color: #13231D;
 }
@@ -551,7 +551,7 @@ void centerOnPrimaryScreen(QWidget *widget)
 
 bool startupLoadingScreenSelfTest()
 {
-    qApp->setFont(QFont("Segoe UI", 10));
+    qApp->setFont(QFont("Times New Roman", 10));
     qApp->setStyleSheet(kAppStyle);
 
     QWidget *loading = buildStartupLoadingScreen();
@@ -710,7 +710,7 @@ public:
         setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
         setAttribute(Qt::WA_TranslucentBackground);
         m_enableAnimations = !QCoreApplication::arguments().contains("--screenshot");
-        qApp->setFont(QFont("Segoe UI", 10));
+        qApp->setFont(QFont("Times New Roman", 10));
         qApp->setStyleSheet(kAppStyle);
         statusBar()->setSizeGripEnabled(false);
         statusBar()->hide();
@@ -3595,7 +3595,7 @@ private:
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    qApp->setFont(QFont("Segoe UI", 10));
+    qApp->setFont(QFont("Times New Roman", 10));
     qApp->setStyleSheet(kAppStyle);
 
     const QStringList arguments = QCoreApplication::arguments();
