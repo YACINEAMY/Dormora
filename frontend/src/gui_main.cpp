@@ -38,6 +38,7 @@
 #include <QPushButton>
 #include <QPixmap>
 #include <QProgressBar>
+#include <QRandomGenerator>
 #include <QShortcut>
 #include <QSaveFile>
 #include <QScreen>
@@ -645,6 +646,125 @@ QProgressBar#startupProgress::chunk {
 }
 )";
 
+const char *kDarkThemeStyle = R"(
+QMainWindow[theme="dark"] QFrame#windowChrome,
+QMainWindow[theme="dark"] QWidget#appRoot,
+QMainWindow[theme="dark"] QWidget#loginRoot,
+QMainWindow[theme="dark"] QWidget#contentPane,
+QMainWindow[theme="dark"] QWidget#studentRoot,
+QMainWindow[theme="dark"] QWidget#studentContentPane,
+QMainWindow[theme="dark"] QDialog {
+    background: #0F1715;
+    color: #E7F2EE;
+}
+QMainWindow[theme="dark"] QFrame.card,
+QMainWindow[theme="dark"] QFrame[class="card"],
+QMainWindow[theme="dark"] QFrame#pageHeader,
+QMainWindow[theme="dark"] QFrame#metricCard,
+QMainWindow[theme="dark"] QFrame#studentCard,
+QMainWindow[theme="dark"] QFrame#studentInfoTile,
+QMainWindow[theme="dark"] QFrame#studentMealCard,
+QMainWindow[theme="dark"] QFrame#studentWeekMenuCard {
+    background: #16231F;
+    border-color: #2B433C;
+}
+QMainWindow[theme="dark"] QFrame#studentWeekMenuRow,
+QMainWindow[theme="dark"] QFrame#studentInlinePanel,
+QMainWindow[theme="dark"] QFrame#todayMenuItem,
+QMainWindow[theme="dark"] QFrame#mealRow {
+    background: #12201C;
+    border-color: #2B433C;
+}
+QMainWindow[theme="dark"] QLabel,
+QMainWindow[theme="dark"] QLabel#pageTitle,
+QMainWindow[theme="dark"] QLabel.cardTitle,
+QMainWindow[theme="dark"] QLabel[class="cardTitle"],
+QMainWindow[theme="dark"] QLabel.metricValue,
+QMainWindow[theme="dark"] QLabel[class="metricValue"] {
+    color: #E7F2EE;
+}
+QMainWindow[theme="dark"] QLabel#pageKicker,
+QMainWindow[theme="dark"] QLabel.muted,
+QMainWindow[theme="dark"] QLabel[class="muted"],
+QMainWindow[theme="dark"] QLabel.metricLabel,
+QMainWindow[theme="dark"] QLabel[class="metricLabel"] {
+    color: #9CB9B0;
+}
+QMainWindow[theme="dark"] QLineEdit,
+QMainWindow[theme="dark"] QComboBox,
+QMainWindow[theme="dark"] QSpinBox,
+QMainWindow[theme="dark"] QDateEdit,
+QMainWindow[theme="dark"] QTableWidget {
+    background: #101C18;
+    border-color: #355247;
+    color: #E7F2EE;
+}
+QMainWindow[theme="dark"] QComboBox::drop-down,
+QMainWindow[theme="dark"] QDateEdit::drop-down,
+QMainWindow[theme="dark"] QSpinBox::up-button,
+QMainWindow[theme="dark"] QSpinBox::down-button {
+    background: #1B2C26;
+    border-color: #355247;
+}
+QMainWindow[theme="dark"] QComboBox QAbstractItemView {
+    background: #101C18;
+    border-color: #355247;
+    color: #E7F2EE;
+    selection-background-color: #1F7560;
+    selection-color: #FFFFFF;
+}
+QMainWindow[theme="dark"] QHeaderView::section {
+    background: #1B2C26;
+    color: #C8DDD6;
+    border-bottom-color: #355247;
+}
+QMainWindow[theme="dark"] QTableWidget::item {
+    border-bottom-color: #20342D;
+}
+QMainWindow[theme="dark"] QTableWidget::item:selected {
+    background: #214D40;
+}
+QMainWindow[theme="dark"] QPushButton {
+    background: #172822;
+    border-color: #355247;
+    color: #E7F2EE;
+}
+QMainWindow[theme="dark"] QPushButton:hover {
+    background: #203B32;
+}
+QMainWindow[theme="dark"] QPushButton.primary,
+QMainWindow[theme="dark"] QPushButton[class="primary"] {
+    background: #23876D;
+    border-color: #23876D;
+    color: #FFFFFF;
+}
+QMainWindow[theme="dark"] QPushButton.danger,
+QMainWindow[theme="dark"] QPushButton[class="danger"] {
+    color: #FFB4AA;
+    border-color: #7A352E;
+}
+QMainWindow[theme="dark"] QPushButton:disabled,
+QMainWindow[theme="dark"] QLineEdit:disabled,
+QMainWindow[theme="dark"] QComboBox:disabled,
+QMainWindow[theme="dark"] QSpinBox:disabled {
+    color: #6F8880;
+    background: #101915;
+    border-color: #253A33;
+}
+QMainWindow[theme="dark"] QLabel#appStatus,
+QMainWindow[theme="dark"] QLabel.counterValue,
+QMainWindow[theme="dark"] QLabel[class="counterValue"] {
+    background: #14231E;
+    border-color: #355247;
+    color: #CDEBE0;
+}
+)";
+
+QString appStyleSheet()
+{
+    return QString::fromLatin1(kAppStyle) + QString::fromLatin1(kDarkThemeStyle);
+}
+
 constexpr int kStartupLoadingMinimumMs = 240;
 
 QLabel *label(const QString &text, const QString &objectName = {}, QWidget *parent = nullptr)
@@ -789,7 +909,7 @@ void centerOnPrimaryScreen(QWidget *widget)
 bool startupLoadingScreenSelfTest()
 {
     qApp->setFont(QFont("Times New Roman", 10));
-    qApp->setStyleSheet(kAppStyle);
+    qApp->setStyleSheet(appStyleSheet());
 
     QWidget *loading = buildStartupLoadingScreen();
     centerOnPrimaryScreen(loading);
@@ -820,7 +940,7 @@ bool startupLoadingScreenSelfTest()
 bool messageBoxStyleSelfTest()
 {
     qApp->setFont(QFont("Times New Roman", 10));
-    qApp->setStyleSheet(kAppStyle);
+    qApp->setStyleSheet(appStyleSheet());
 
     QMessageBox box(QMessageBox::Warning,
                     "Rule feedback",
@@ -928,16 +1048,19 @@ public:
         , m_dataFilePath(m_usesDefaultDataPath ? defaultAppStatePath() : std::move(dataFilePath))
     {
         loadOrSeedData();
+        // The app uses custom rounded chrome, so resize and drag behavior is
+        // implemented below instead of relying on the native window frame.
         setWindowFlags(Qt::Window | Qt::FramelessWindowHint);
         setAttribute(Qt::WA_TranslucentBackground);
         m_enableAnimations = !QCoreApplication::arguments().contains("--screenshot");
         qApp->setFont(QFont("Times New Roman", 10));
-        qApp->setStyleSheet(kAppStyle);
+        qApp->setStyleSheet(appStyleSheet());
         statusBar()->setSizeGripEnabled(false);
         statusBar()->hide();
         auto *fullscreenShortcut = new QShortcut(QKeySequence(Qt::Key_F11), this);
         connect(fullscreenShortcut, &QShortcut::activated, this, [this] { toggleFullScreen(); });
         buildLoginUi();
+        applyTheme();
         setWindowTitle("Dormora");
         setWindowIcon(QIcon(":/icons/dormora-logo.svg"));
         resize(1280, 780);
@@ -948,6 +1071,8 @@ protected:
     void mousePressEvent(QMouseEvent *event) override
     {
         if (event->button() == Qt::LeftButton) {
+            // A frameless Qt window needs explicit hit-testing for border
+            // resize gestures.
             m_resizeEdges = resizeEdgesAt(event->position().toPoint());
             if (m_resizeEdges != 0 && !isMaximized() && !isFullScreen()) {
                 m_resizingWindow = true;
@@ -1004,10 +1129,11 @@ private:
     University m_university;
     QVector<Neighborhood> m_neighborhoods;
     QHash<QString, AdminProfile> m_adminProfiles;
+    QHash<QString, QString> m_studentCredentials;
     AuthRole m_role = AuthRole::None;
     bool m_usesDefaultDataPath = false;
     QString m_dataFilePath;
-    QString m_studentPortalPassword = "student123";
+    bool m_darkMode = false;
     QString m_currentAdminUsername;
     QString m_currentStudentId;
     QPoint m_dragPosition;
@@ -1053,6 +1179,13 @@ private:
     QLabel *m_profileStatusLabel = nullptr;
     QLineEdit *m_profileNameInput = nullptr;
     QSpinBox *m_profileYearInput = nullptr;
+    QPushButton *m_profileSaveButton = nullptr;
+    QPushButton *m_profileResetEditsButton = nullptr;
+    QPushButton *m_profileDuplicateButton = nullptr;
+    QPushButton *m_profileDeleteButton = nullptr;
+    QPushButton *m_profileAssignButton = nullptr;
+    QPushButton *m_profileRemoveButton = nullptr;
+    QPushButton *m_profileResetPasswordButton = nullptr;
     QVBoxLayout *m_todayMenuSummary = nullptr;
     QTableWidget *m_neighborhoodTable = nullptr;
     QLineEdit *m_neighborhoodSearchInput = nullptr;
@@ -1102,6 +1235,8 @@ private:
     bool m_loadingStudentProfile = false;
     bool m_loadingMenuEditor = false;
     QVector<QPushButton *> m_navButtons;
+    // Visible lists are filtered by the active admin's access scope. They are
+    // cached because many refresh functions ask for the same filtered data.
     mutable QVector<Dormitory> m_cachedVisibleDormitories;
     mutable QVector<Student> m_cachedVisibleStudents;
     mutable bool m_visibilityCacheDirty = true;
@@ -1122,20 +1257,21 @@ private:
     };
 
     struct ExampleMenuSeed {
+        // Menus are relative to the current date so demo data always has
+        // "today" and upcoming-week records.
         int dayOffset;
         const char *dormitoryId;
         const char *breakfast;
         const char *lunch;
         const char *dinner;
-        const char *breakfastImageUrl;
-        const char *lunchImageUrl;
-        const char *dinnerImageUrl;
     };
 
     void loadOrSeedData()
     {
         if (QFile::exists(m_dataFilePath)) {
             loadAppState();
+            // Existing installations are upgraded in place when new demo
+            // dormitories, accounts, menus, or meal images are added.
             if (ensureExampleDataVolume()) {
                 saveAppState();
             }
@@ -1151,7 +1287,8 @@ private:
         m_university = University();
         m_neighborhoods.clear();
         m_adminProfiles.clear();
-        m_studentPortalPassword = "student123";
+        m_studentCredentials.clear();
+        m_darkMode = false;
 
         Dormitory north("D1", "North Residence Hall", 100, Restaurant("North Dining Hall"));
         for (int roomNumber = 101; roomNumber <= 150; ++roomNumber) {
@@ -1193,13 +1330,16 @@ private:
         m_adminProfiles.insert("southadmin", {"southadmin", "south123", "South Campus Manager", false, {"SOUTH"}});
         m_adminProfiles.insert("eastadmin", {"eastadmin", "east123", "East Campus Manager", false, {"EAST"}});
         m_adminProfiles.insert("westadmin", {"westadmin", "west123", "West Campus Manager", false, {"WEST"}});
+        ensureStudentCredentials();
     }
 
     bool ensureExampleDataVolume()
     {
         bool changed = ensureOperationalScaffolding();
         changed = addExampleStudents(true) || changed;
+        changed = ensureStudentCredentials() || changed;
         changed = addExampleMenus(true) || changed;
+        changed = refreshSavedMenuImages() || changed;
         return changed;
     }
 
@@ -1210,6 +1350,8 @@ private:
             if (m_university.hasDormitory(id)) {
                 return false;
             }
+            // Room ranges are generated instead of hard-coded so dormitory
+            // capacity and room count stay aligned.
             Dormitory dormitory(id, name, (lastRoom - firstRoom + 1) * 2, Restaurant(restaurantName));
             for (int roomNumber = firstRoom; roomNumber <= lastRoom; ++roomNumber) {
                 dormitory.addRoom(Room(roomNumber, 2));
@@ -1245,6 +1387,8 @@ private:
         changed = ensureAdmin("eastadmin", "east123", "East Campus Manager", false, {"EAST"}) || changed;
         changed = ensureAdmin("westadmin", "west123", "West Campus Manager", false, {"WEST"}) || changed;
         if (mealsRecordedOn(QDate::currentDate()) == 0) {
+            // Seed a visible count for dashboard/demo screens only once per
+            // day, then preserve later operator changes.
             recordOperationalMealCounts(QDate::currentDate());
             changed = true;
         }
@@ -1267,6 +1411,8 @@ private:
 
             Student &student = m_university.student(studentId);
             const QString dormitoryId = seed.dormitoryId;
+            // Seed assignment is best-effort: if the user has already assigned
+            // the student or filled the target room, their data wins.
             if (!student.isAssigned()
                 && m_university.hasDormitory(dormitoryId)
                 && m_university.dormitory(dormitoryId).hasRoom(seed.roomNumber)
@@ -1276,6 +1422,94 @@ private:
             }
         }
         return changed;
+    }
+
+    QString generateStudentPassword() const
+    {
+        static const QString alphabet = QStringLiteral("ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789");
+        QString password = QStringLiteral("Stu-");
+        for (int i = 0; i < 10; ++i) {
+            const int index = QRandomGenerator::global()->bounded(alphabet.size());
+            password.append(alphabet.at(index));
+        }
+        return password;
+    }
+
+    QString createStudentCredential(const QString &studentId)
+    {
+        const QString key = studentId.trimmed().toUpper();
+        const QString password = generateStudentPassword();
+        m_studentCredentials.insert(key, password);
+        return password;
+    }
+
+    QString addStudentRecord(const QString &studentId, const QString &fullName, int academicYear)
+    {
+        const QString key = studentId.trimmed().toUpper();
+        if (key.isEmpty() || fullName.trimmed().isEmpty()) {
+            throw DomainError("Student ID and full name are required.");
+        }
+        m_university.addStudent(Student(key, fullName.trimmed(), academicYear));
+        return createStudentCredential(key);
+    }
+
+    bool ensureStudentCredentials()
+    {
+        bool changed = false;
+        // Student accounts are stored separately from Student so the academic
+        // domain model stays focused on residence data, not login state.
+        for (const Student &student : m_university.students()) {
+            if (!m_studentCredentials.contains(student.id())) {
+                createStudentCredential(student.id());
+                changed = true;
+            }
+        }
+
+        for (auto it = m_studentCredentials.begin(); it != m_studentCredentials.end();) {
+            if (!m_university.hasStudent(it.key())) {
+                it = m_studentCredentials.erase(it);
+                changed = true;
+            } else {
+                ++it;
+            }
+        }
+        return changed;
+    }
+
+    QJsonObject studentCredentialsToJson() const
+    {
+        QJsonObject credentials;
+        QVector<QString> studentIds(m_studentCredentials.keyBegin(), m_studentCredentials.keyEnd());
+        std::sort(studentIds.begin(), studentIds.end());
+        for (const QString &studentId : studentIds) {
+            credentials.insert(studentId, m_studentCredentials.value(studentId));
+        }
+        return credentials;
+    }
+
+    QHash<QString, QString> studentCredentialsFromJson(const QJsonObject &root, const University &loadedUniversity) const
+    {
+        QHash<QString, QString> credentials;
+        const QJsonValue value = root.value("studentCredentials");
+        if (value.isUndefined()) {
+            return credentials;
+        }
+        if (!value.isObject()) {
+            throw DomainError("App state field 'studentCredentials' must be an object.");
+        }
+
+        const QJsonObject object = value.toObject();
+        for (auto it = object.constBegin(); it != object.constEnd(); ++it) {
+            const QString studentId = it.key().trimmed().toUpper();
+            if (!loadedUniversity.hasStudent(studentId)) {
+                continue;
+            }
+            if (!it.value().isString() || it.value().toString().isEmpty()) {
+                throw DomainError("Student credential entries must be non-empty strings.");
+            }
+            credentials.insert(studentId, it.value().toString());
+        }
+        return credentials;
     }
 
     bool addExampleMenus(bool preserveExisting)
@@ -1299,6 +1533,9 @@ private:
                 const auto existingMenu = m_university.dormitory(dormitoryId).restaurant().menuForDate(date);
                 const auto needsBundledImage = [](const QString &value) {
                     const QString trimmed = value.trimmed();
+                    // Bundled or remote demo images can be refreshed when the
+                    // app gains a better local resource. Custom local paths are
+                    // left alone.
                     return trimmed.isEmpty()
                         || trimmed.startsWith("http://")
                         || trimmed.startsWith("https://")
@@ -1312,17 +1549,24 @@ private:
                 }
                 if (existingMenu.has_value()) {
                     DailyMenu upgradedMenu = existingMenu.value();
-                    if (needsBundledImage(upgradedMenu.breakfastImageUrl)) {
+                    if (needsBundledImage(upgradedMenu.breakfastImageUrl)
+                        && upgradedMenu.breakfastImageUrl != breakfastImageUrl) {
                         upgradedMenu.breakfastImageUrl = breakfastImageUrl;
                     }
-                    if (needsBundledImage(upgradedMenu.lunchImageUrl)) {
+                    if (needsBundledImage(upgradedMenu.lunchImageUrl)
+                        && upgradedMenu.lunchImageUrl != lunchImageUrl) {
                         upgradedMenu.lunchImageUrl = lunchImageUrl;
                     }
-                    if (needsBundledImage(upgradedMenu.dinnerImageUrl)) {
+                    if (needsBundledImage(upgradedMenu.dinnerImageUrl)
+                        && upgradedMenu.dinnerImageUrl != dinnerImageUrl) {
                         upgradedMenu.dinnerImageUrl = dinnerImageUrl;
                     }
-                    m_university.setRestaurantMenu(dormitoryId, date, upgradedMenu);
-                    changed = true;
+                    if (upgradedMenu.breakfastImageUrl != existingMenu->breakfastImageUrl
+                        || upgradedMenu.lunchImageUrl != existingMenu->lunchImageUrl
+                        || upgradedMenu.dinnerImageUrl != existingMenu->dinnerImageUrl) {
+                        m_university.setRestaurantMenu(dormitoryId, date, upgradedMenu);
+                        changed = true;
+                    }
                     continue;
                 }
             }
@@ -1336,6 +1580,47 @@ private:
                 dinnerImageUrl,
             });
             changed = true;
+        }
+        return changed;
+    }
+
+    bool refreshSavedMenuImages()
+    {
+        bool changed = false;
+        const auto canRefreshImage = [](const QString &value) {
+            const QString trimmed = value.trimmed();
+            // This migration fixes old saved menus that pointed to generic
+            // images before more precise meal photos were added.
+            return trimmed.isEmpty()
+                || trimmed.startsWith("http://")
+                || trimmed.startsWith("https://")
+                || trimmed.startsWith(":/icons/meal-");
+        };
+
+        for (const Dormitory &dormitory : m_university.dormitories()) {
+            const QMap<QDate, DailyMenu> menus = dormitory.restaurant().menus();
+            for (auto it = menus.cbegin(); it != menus.cend(); ++it) {
+                DailyMenu updatedMenu = it.value();
+                bool menuChanged = false;
+                const auto refreshImage = [&](QString &imageUrl, const QString &meal, const QString &mealType) {
+                    const QString expectedImage = mealImageForDescription(meal, mealType);
+                    // Only replace refreshable demo paths. Operators can still
+                    // enter a specific local image path and keep it.
+                    if (canRefreshImage(imageUrl) && imageUrl != expectedImage) {
+                        imageUrl = expectedImage;
+                        menuChanged = true;
+                    }
+                };
+
+                refreshImage(updatedMenu.breakfastImageUrl, updatedMenu.breakfast, QStringLiteral("breakfast"));
+                refreshImage(updatedMenu.lunchImageUrl, updatedMenu.lunch, QStringLiteral("lunch"));
+                refreshImage(updatedMenu.dinnerImageUrl, updatedMenu.dinner, QStringLiteral("dinner"));
+
+                if (menuChanged) {
+                    m_university.setRestaurantMenu(dormitory.id(), it.key(), updatedMenu);
+                    changed = true;
+                }
+            }
         }
         return changed;
     }
@@ -1433,50 +1718,47 @@ private:
 
     static QVector<ExampleMenuSeed> exampleMenuSeeds()
     {
-        static constexpr const char *breakfastImage = ":/icons/meal-breakfast.png";
-        static constexpr const char *lunchImage = ":/icons/meal-lunch.png";
-        static constexpr const char *dinnerImage = ":/icons/meal-dinner.png";
         return {
-            {0, "D1", "Coffee, eggs, and toast", "Chicken rice bowl with salad", "Lentil soup and grilled vegetables", breakfastImage, lunchImage, dinnerImage},
-            {0, "D2", "Mint tea, msemen, and yogurt", "Couscous with vegetables", "Vegetable stew with bread", breakfastImage, lunchImage, dinnerImage},
-            {0, "D3", "Greek yogurt with figs", "Lemon chicken pasta", "Vegetable curry with rice", breakfastImage, lunchImage, dinnerImage},
-            {0, "D4", "Omelet, olives, and bread", "Salmon rice plate", "Harira soup with dates", breakfastImage, lunchImage, dinnerImage},
-            {1, "D1", "Oatmeal with dates and milk", "Turkey sandwich with tomato soup", "Pasta primavera and fruit", breakfastImage, lunchImage, dinnerImage},
-            {1, "D2", "Croissants, jam, and orange juice", "Beef tagine with rice", "Chickpea salad and baked potatoes", breakfastImage, lunchImage, dinnerImage},
-            {1, "D3", "Baghrir, honey, and milk", "Falafel bowl with hummus", "Chicken couscous", breakfastImage, lunchImage, dinnerImage},
-            {1, "D4", "Fruit smoothie and muffin", "Pesto pasta with chicken", "Spinach quiche and soup", breakfastImage, lunchImage, dinnerImage},
-            {2, "D1", "Cheese omelet and fruit", "Tuna pasta salad", "Roast chicken with carrots", breakfastImage, lunchImage, dinnerImage},
-            {2, "D2", "Baghrir, honey, and milk", "Lentil dal with flatbread", "Fish fillet with herb rice", breakfastImage, lunchImage, dinnerImage},
-            {2, "D3", "Pancakes with banana", "Chicken shawarma plate", "Black bean chili and cornbread", breakfastImage, lunchImage, dinnerImage},
-            {2, "D4", "Toast, jam, and yogurt", "Vegetarian tajine", "Turkey meatloaf with mash", breakfastImage, lunchImage, dinnerImage},
-            {3, "D1", "Greek yogurt with granola", "Beef kofta wrap", "Tomato soup with grilled cheese", breakfastImage, lunchImage, dinnerImage},
-            {3, "D2", "Scrambled eggs and baguette", "Chicken couscous", "Vegetable lasagna", breakfastImage, lunchImage, dinnerImage},
-            {3, "D3", "Avocado toast and boiled egg", "Shrimp rice skillet", "Baked fish with green beans", breakfastImage, lunchImage, dinnerImage},
-            {3, "D4", "Semolina porridge and fruit", "Grilled chicken salad", "Mushroom risotto", breakfastImage, lunchImage, dinnerImage},
-            {4, "D1", "Pancakes with banana", "Falafel bowl with hummus", "Beef stew with potatoes", breakfastImage, lunchImage, dinnerImage},
-            {4, "D2", "Coffee, toast, and cheese", "Grilled chicken salad", "Harira soup and dates", breakfastImage, lunchImage, dinnerImage},
-            {4, "D3", "Milk, cereal, and apple slices", "Rice with chickpeas and vegetables", "Creamy tomato pasta", breakfastImage, lunchImage, dinnerImage},
-            {4, "D4", "French toast and berries", "Beef burger with salad", "Roasted vegetable couscous", breakfastImage, lunchImage, dinnerImage},
-            {5, "D1", "Breakfast burrito", "Salmon rice plate", "Mushroom risotto", breakfastImage, lunchImage, dinnerImage},
-            {5, "D2", "Semolina porridge and fruit", "Pasta bolognese", "Stuffed peppers and salad", breakfastImage, lunchImage, dinnerImage},
-            {5, "D3", "Boiled eggs, olives, and bread", "Chicken caesar wrap", "Fish fillet with herb rice", breakfastImage, lunchImage, dinnerImage},
-            {5, "D4", "Greek yogurt with granola", "Beef kofta wrap", "Vegetable lasagna", breakfastImage, lunchImage, dinnerImage},
-            {6, "D1", "French toast and berries", "Chicken shawarma plate", "Vegetable curry with rice", breakfastImage, lunchImage, dinnerImage},
-            {6, "D2", "Boiled eggs, olives, and bread", "Lamb meatballs with couscous", "Spinach quiche and soup", breakfastImage, lunchImage, dinnerImage},
-            {6, "D3", "Coffee, eggs, and toast", "Couscous with vegetables", "Pasta primavera and fruit", breakfastImage, lunchImage, dinnerImage},
-            {6, "D4", "Mint tea, msemen, and yogurt", "Tuna pasta salad", "Lentil soup and grilled vegetables", breakfastImage, lunchImage, dinnerImage},
-            {7, "D1", "Avocado toast and boiled egg", "Pesto pasta with chicken", "Black bean chili and cornbread", breakfastImage, lunchImage, dinnerImage},
-            {7, "D2", "Milk, cereal, and apple slices", "Shrimp rice skillet", "Roasted vegetable couscous", breakfastImage, lunchImage, dinnerImage},
-            {7, "D3", "Cheese omelet and fruit", "Turkey sandwich with tomato soup", "Chickpea salad and baked potatoes", breakfastImage, lunchImage, dinnerImage},
-            {7, "D4", "Croissants, jam, and orange juice", "Chicken rice bowl with salad", "Vegetable stew with bread", breakfastImage, lunchImage, dinnerImage},
-            {8, "D1", "Fruit smoothie and muffin", "Chicken caesar wrap", "Baked fish with green beans", breakfastImage, lunchImage, dinnerImage},
-            {8, "D2", "Omelet with peppers", "Vegetarian tajine", "Creamy tomato pasta", breakfastImage, lunchImage, dinnerImage},
-            {8, "D3", "Toast, jam, and yogurt", "Beef tagine with rice", "Roast chicken with carrots", breakfastImage, lunchImage, dinnerImage},
-            {8, "D4", "Baghrir, honey, and milk", "Lentil dal with flatbread", "Tomato soup with grilled cheese", breakfastImage, lunchImage, dinnerImage},
-            {9, "D1", "Toast, jam, and yogurt", "Beef burger with salad", "Chicken noodle soup", breakfastImage, lunchImage, dinnerImage},
-            {9, "D2", "Dates, bread, and labneh", "Rice with chickpeas and vegetables", "Turkey meatloaf with mash", breakfastImage, lunchImage, dinnerImage},
-            {9, "D3", "Scrambled eggs and baguette", "Chicken couscous", "Harira soup and dates", breakfastImage, lunchImage, dinnerImage},
-            {9, "D4", "Pancakes with banana", "Falafel bowl with hummus", "Beef stew with potatoes", breakfastImage, lunchImage, dinnerImage},
+            {0, "D1", "Coffee, eggs, and toast", "Chicken rice bowl with salad", "Lentil soup and grilled vegetables"},
+            {0, "D2", "Mint tea, msemen, and yogurt", "Couscous with vegetables", "Vegetable stew with bread"},
+            {0, "D3", "Greek yogurt with figs", "Lemon chicken pasta", "Vegetable curry with rice"},
+            {0, "D4", "Omelet, olives, and bread", "Salmon rice plate", "Harira soup with dates"},
+            {1, "D1", "Oatmeal with dates and milk", "Turkey sandwich with tomato soup", "Pasta primavera and fruit"},
+            {1, "D2", "Croissants, jam, and orange juice", "Beef tagine with rice", "Chickpea salad and baked potatoes"},
+            {1, "D3", "Baghrir, honey, and milk", "Falafel bowl with hummus", "Chicken couscous"},
+            {1, "D4", "Fruit smoothie and muffin", "Pesto pasta with chicken", "Spinach quiche and soup"},
+            {2, "D1", "Cheese omelet and fruit", "Tuna pasta salad", "Roast chicken with carrots"},
+            {2, "D2", "Baghrir, honey, and milk", "Lentil dal with flatbread", "Fish fillet with herb rice"},
+            {2, "D3", "Pancakes with banana", "Chicken shawarma plate", "Black bean chili and cornbread"},
+            {2, "D4", "Toast, jam, and yogurt", "Vegetarian tajine", "Turkey meatloaf with mash"},
+            {3, "D1", "Greek yogurt with granola", "Beef kofta wrap", "Tomato soup with grilled cheese"},
+            {3, "D2", "Scrambled eggs and baguette", "Chicken couscous", "Vegetable lasagna"},
+            {3, "D3", "Avocado toast and boiled egg", "Shrimp rice skillet", "Baked fish with green beans"},
+            {3, "D4", "Semolina porridge and fruit", "Grilled chicken salad", "Mushroom risotto"},
+            {4, "D1", "Pancakes with banana", "Falafel bowl with hummus", "Beef stew with potatoes"},
+            {4, "D2", "Coffee, toast, and cheese", "Grilled chicken salad", "Harira soup and dates"},
+            {4, "D3", "Milk, cereal, and apple slices", "Rice with chickpeas and vegetables", "Creamy tomato pasta"},
+            {4, "D4", "French toast and berries", "Beef burger with salad", "Roasted vegetable couscous"},
+            {5, "D1", "Breakfast burrito", "Salmon rice plate", "Mushroom risotto"},
+            {5, "D2", "Semolina porridge and fruit", "Pasta bolognese", "Stuffed peppers and salad"},
+            {5, "D3", "Boiled eggs, olives, and bread", "Chicken caesar wrap", "Fish fillet with herb rice"},
+            {5, "D4", "Greek yogurt with granola", "Beef kofta wrap", "Vegetable lasagna"},
+            {6, "D1", "French toast and berries", "Chicken shawarma plate", "Vegetable curry with rice"},
+            {6, "D2", "Boiled eggs, olives, and bread", "Lamb meatballs with couscous", "Spinach quiche and soup"},
+            {6, "D3", "Coffee, eggs, and toast", "Couscous with vegetables", "Pasta primavera and fruit"},
+            {6, "D4", "Mint tea, msemen, and yogurt", "Tuna pasta salad", "Lentil soup and grilled vegetables"},
+            {7, "D1", "Avocado toast and boiled egg", "Pesto pasta with chicken", "Black bean chili and cornbread"},
+            {7, "D2", "Milk, cereal, and apple slices", "Shrimp rice skillet", "Roasted vegetable couscous"},
+            {7, "D3", "Cheese omelet and fruit", "Turkey sandwich with tomato soup", "Chickpea salad and baked potatoes"},
+            {7, "D4", "Croissants, jam, and orange juice", "Chicken rice bowl with salad", "Vegetable stew with bread"},
+            {8, "D1", "Fruit smoothie and muffin", "Chicken caesar wrap", "Baked fish with green beans"},
+            {8, "D2", "Omelet with peppers", "Vegetarian tajine", "Creamy tomato pasta"},
+            {8, "D3", "Toast, jam, and yogurt", "Beef tagine with rice", "Roast chicken with carrots"},
+            {8, "D4", "Baghrir, honey, and milk", "Lentil dal with flatbread", "Tomato soup with grilled cheese"},
+            {9, "D1", "Toast, jam, and yogurt", "Beef burger with salad", "Chicken noodle soup"},
+            {9, "D2", "Dates, bread, and labneh", "Rice with chickpeas and vegetables", "Turkey meatloaf with mash"},
+            {9, "D3", "Scrambled eggs and baguette", "Chicken couscous", "Harira soup and dates"},
+            {9, "D4", "Pancakes with banana", "Falafel bowl with hummus", "Beef stew with potatoes"},
         };
     }
 
@@ -1492,7 +1774,20 @@ private:
             }
             return false;
         };
+        // Exact menu names get priority because the generated images were made
+        // for those specific student dining cards.
+        if (text.contains(QStringLiteral("oatmeal with dates and milk"))) {
+            return QStringLiteral(":/icons/meal-oatmeal-dates-milk.png");
+        }
+        if (text.contains(QStringLiteral("turkey sandwich with tomato soup"))) {
+            return QStringLiteral(":/icons/meal-turkey-sandwich-tomato-soup.png");
+        }
+        if (text.contains(QStringLiteral("pasta primavera and fruit"))) {
+            return QStringLiteral(":/icons/meal-pasta-primavera-fruit.png");
+        }
         const auto savoryImage = [&]() -> QString {
+            // Keyword matching keeps menu editing simple: admins type meal
+            // names and the app chooses the closest bundled image.
             if (has({"couscous"})) {
                 return QStringLiteral(":/icons/meal-couscous.png");
             }
@@ -1560,6 +1855,7 @@ private:
             return image;
         }
 
+        // Final fallback keeps all meal cards visual even for custom menu text.
         return breakfast
             ? QStringLiteral(":/icons/meal-eggs-toast.png")
             : QStringLiteral(":/icons/meal-chicken-rice.png");
@@ -1583,7 +1879,8 @@ private:
             {"university", m_university.toJson()},
             {"neighborhoods", neighborhoods},
             {"adminProfiles", adminProfiles},
-            {"studentPortalPassword", m_studentPortalPassword},
+            {"studentCredentials", studentCredentialsToJson()},
+            {"darkMode", m_darkMode},
         };
     }
 
@@ -1641,15 +1938,12 @@ private:
             throw DomainError("App state must contain at least one admin profile.");
         }
 
-        const QString loadedStudentPassword = requiredAppString(root, "studentPortalPassword");
-        if (loadedStudentPassword.isEmpty()) {
-            throw DomainError("Student portal password cannot be empty.");
-        }
-
         m_university = loadedUniversity;
         m_neighborhoods = loadedNeighborhoods;
         m_adminProfiles = loadedProfiles;
-        m_studentPortalPassword = loadedStudentPassword;
+        m_studentCredentials = studentCredentialsFromJson(root, loadedUniversity);
+        m_darkMode = root.value("darkMode").isBool() ? root.value("darkMode").toBool() : false;
+        ensureStudentCredentials();
     }
 
     void saveAppState() const
@@ -1752,6 +2046,48 @@ private:
         applyChromeState();
     }
 
+    void toggleDarkMode()
+    {
+        setDarkMode(!m_darkMode, true);
+    }
+
+    void setDarkMode(bool enabled, bool persist)
+    {
+        m_darkMode = enabled;
+        applyTheme();
+        if (persist) {
+            saveAppState();
+        }
+    }
+
+    void applyTheme()
+    {
+        const QString theme = m_darkMode ? QStringLiteral("dark") : QStringLiteral("light");
+        // The stylesheet uses the dynamic theme property on the window and key
+        // roots, which keeps dark mode available to every role without
+        // duplicating page construction code.
+        auto updateSurface = [&theme](QWidget *surface) {
+            if (surface == nullptr) {
+                return;
+            }
+            surface->setProperty("theme", theme);
+            surface->style()->unpolish(surface);
+            surface->style()->polish(surface);
+            surface->update();
+        };
+
+        updateSurface(this);
+        updateSurface(m_windowChrome);
+        updateSurface(m_contentRoot);
+        if (m_windowChrome != nullptr) {
+            for (QWidget *child : m_windowChrome->findChildren<QWidget *>()) {
+                child->style()->unpolish(child);
+                child->style()->polish(child);
+                child->update();
+            }
+        }
+    }
+
     void toggleSidebar()
     {
         m_sidebarCollapsed = !m_sidebarCollapsed;
@@ -1774,6 +2110,8 @@ private:
         QWidget *oldSidebar = m_sidebarWidget;
         QWidget *newSidebar = m_role == AuthRole::Admin ? buildSidebar() : buildStudentSidebar();
         const int targetWidth = m_sidebarCollapsed ? 76 : 238;
+        // Replace only the sidebar so collapsing it does not reset the active
+        // page, selected filters, or scroll position.
         newSidebar->setFixedWidth(oldWidth);
 
         if (oldSidebar != nullptr) {
@@ -1826,6 +2164,8 @@ private:
 
         auto updateSurface = [fullscreen](QWidget *surface) {
             surface->setProperty("fullscreenChrome", fullscreen);
+            // Dynamic Qt stylesheet properties need an explicit unpolish/polish
+            // pass before the rounded/fullscreen chrome rules repaint.
             surface->style()->unpolish(surface);
             surface->style()->polish(surface);
             surface->update();
@@ -1922,6 +2262,13 @@ private:
         button->setMinimumHeight(44);
         button->setProperty("class", "primary");
         loginLayout->addWidget(button);
+        auto *themeButton = new QPushButton(m_darkMode ? "Use light mode" : "Use dark mode", loginCard);
+        themeButton->setMinimumHeight(40);
+        connect(themeButton, &QPushButton::clicked, this, [this, themeButton] {
+            toggleDarkMode();
+            themeButton->setText(m_darkMode ? "Use light mode" : "Use dark mode");
+        });
+        loginLayout->addWidget(themeButton);
         m_loginFeedback = classLabel("", "muted");
         m_loginFeedback->setStyleSheet("QLabel { color: #B42318; font-weight: 700; }");
         loginLayout->addWidget(m_loginFeedback);
@@ -1974,6 +2321,21 @@ private:
         return controls;
     }
 
+    QPushButton *buildThemeButton(QWidget *parent)
+    {
+        auto *button = new QPushButton(m_sidebarCollapsed ? QString() : (m_darkMode ? "Light mode" : "Dark mode"), parent);
+        button->setProperty("nav", true);
+        button->setProperty("compactNav", m_sidebarCollapsed);
+        button->setMinimumHeight(44);
+        button->setMinimumWidth(m_sidebarCollapsed ? 48 : 0);
+        button->setToolTip(m_darkMode ? "Switch to light mode" : "Switch to dark mode");
+        if (m_sidebarCollapsed) {
+            button->setText(m_darkMode ? "L" : "D");
+        }
+        connect(button, &QPushButton::clicked, this, [this] { toggleDarkMode(); });
+        return button;
+    }
+
     QWidget *buildBrandLockup(QWidget *parent, const QString &subtitle)
     {
         auto *wrap = new QWidget(parent);
@@ -2009,6 +2371,7 @@ private:
         layout->addWidget(m_statusLabel);
         setCentralWidget(chrome);
         applyChromeState();
+        applyTheme();
 
         if (!m_enableAnimations) {
             return;
@@ -2033,6 +2396,8 @@ private:
         const QString password = m_loginPasswordInput->text();
 
         const QString adminKey = user.toLower();
+        // Login auto-detects role: known admin usernames open the operations
+        // workspace, while student IDs open the resident portal.
         if (m_adminProfiles.contains(adminKey) && m_adminProfiles.value(adminKey).password == password) {
             m_role = AuthRole::Admin;
             m_currentAdminUsername = adminKey;
@@ -2045,9 +2410,12 @@ private:
         }
 
         const QString studentId = user.toUpper();
-        if (m_university.hasStudent(studentId) && password == m_studentPortalPassword) {
+        // Student logins use per-student generated credentials so a newly
+        // created record immediately has its own portal account.
+        if (m_university.hasStudent(studentId) && m_studentCredentials.value(studentId) == password) {
             m_role = AuthRole::Student;
             m_currentStudentId = studentId;
+            m_currentAdminUsername.clear();
             invalidateVisibilityCache();
             buildStudentPortalUi();
             showStatus("Signed in as " + m_university.student(studentId).fullName() + ".");
@@ -2055,6 +2423,70 @@ private:
         }
 
         m_loginFeedback->setText("Credentials not recognized. Check the username or password.");
+    }
+
+    bool isAutomationMode() const
+    {
+        const QStringList arguments = QCoreApplication::arguments();
+        for (const QString &argument : arguments) {
+            if (argument.endsWith("-self-test") || argument == "--smoke-test" || argument == "--screenshot") {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void displayGeneratedStudentPassword(const QString &studentId, const QString &password)
+    {
+        const QString message = "Student account created for " + studentId
+            + ".\nTemporary password:\n\n" + password
+            + "\n\nShow this to the student now. It will not be displayed again.";
+        showStatus("Generated a one-time password for " + studentId + ".");
+        if (!isAutomationMode()) {
+            showInformationMessage(this, "One-time student password", message);
+        }
+    }
+
+    void requireCanEditStudent(const Student &student) const
+    {
+        if (currentAdminHasFullAccess()) {
+            return;
+        }
+        // Unassigned students remain editable so district admins can complete
+        // intake, but assigned students are locked outside the admin's district.
+        if (!student.isAssigned() || currentAdminCanAccessDormitory(student.dormitoryId().value())) {
+            return;
+        }
+        throw DomainError("This admin can view this student but cannot edit students outside their district.");
+    }
+
+    QString resetStudentPasswordForAdmin(const QString &studentId)
+    {
+        requireFullAccess();
+        const QString key = studentId.trimmed().toUpper();
+        if (!m_university.hasStudent(key)) {
+            throw DomainError("Select a valid student before resetting a password.");
+        }
+        const QString password = createStudentCredential(key);
+        saveAppState();
+        displayGeneratedStudentPassword(key, password);
+        return password;
+    }
+
+    void changeCurrentStudentPassword(const QString &currentPassword, const QString &newPassword)
+    {
+        if (m_role != AuthRole::Student || m_currentStudentId.isEmpty()) {
+            throw DomainError("Only signed-in students can change their password.");
+        }
+        if (m_studentCredentials.value(m_currentStudentId) != currentPassword) {
+            throw DomainError("Current password is incorrect.");
+        }
+        if (newPassword.trimmed().size() < 8) {
+            throw DomainError("New password must contain at least 8 characters.");
+        }
+        m_studentCredentials[m_currentStudentId] = newPassword;
+        saveAppState();
+        showStatus("Password changed.");
     }
 
 public:
@@ -2176,6 +2608,12 @@ public:
 
     bool credentialRoutingHealthyForTest()
     {
+        const QJsonObject credentials = appStateToJson().value("studentCredentials").toObject();
+        const QString seededStudentPassword = credentials.value("S1001").toString();
+        if (seededStudentPassword.isEmpty() || seededStudentPassword == "student123") {
+            return false;
+        }
+
         if (authenticateCredentialsForTest("admin", "wrong") != AuthRole::None
             || m_loginFeedback == nullptr
             || !m_loginFeedback->text().contains("Credentials not recognized")) {
@@ -2190,13 +2628,14 @@ public:
             return false;
         }
 
-        if (authenticateCredentialsForTest("s1001", m_studentPortalPassword) != AuthRole::Student
+        if (authenticateCredentialsForTest("s1001", seededStudentPassword) != AuthRole::Student
             || m_currentStudentId != "S1001"
             || !m_currentAdminUsername.isEmpty()) {
             return false;
         }
 
-        return authenticateCredentialsForTest("S1001", "bad-password") == AuthRole::None;
+        return authenticateCredentialsForTest("S1001", "student123") == AuthRole::None
+            && authenticateCredentialsForTest("S1001", "bad-password") == AuthRole::None;
     }
 
     bool adminPermissionBoundariesHealthyForTest()
@@ -2221,10 +2660,8 @@ public:
                 return false;
             }
         }
-        for (const Student &student : visibleStudents()) {
-            if (student.isAssigned() && student.dormitoryId().value() != "D1") {
-                return false;
-            }
+        if (visibleStudents().size() != m_university.students().size()) {
+            return false;
         }
 
         showPageForTest(3);
@@ -2335,6 +2772,91 @@ public:
             && currentAdminCanAccessDormitory("D3")
             && !currentAdminCanAccessDormitory("D1")
             && visibleDormitories().size() == 1;
+    }
+
+    bool studentAccountWorkflowsHealthyForTest()
+    {
+        loginAsAdminForTest("admin");
+        showPageForTest(1);
+        refreshAll();
+
+        const QString generatedOnCreate = addStudentRecord("S7777", "Generated Password Student", 2);
+        saveAppState();
+
+        const QString createdPassword = appStateToJson()
+            .value("studentCredentials").toObject()
+            .value("S7777").toString();
+        if (createdPassword.isEmpty() || createdPassword != generatedOnCreate || createdPassword == "student123") {
+            return false;
+        }
+        if (authenticateCredentialsForTest("S7777", createdPassword) != AuthRole::Student) {
+            return false;
+        }
+
+        const QString changedPassword = "student-private-7788";
+        changeCurrentStudentPasswordForTest(createdPassword, changedPassword);
+        if (authenticateCredentialsForTest("S7777", createdPassword) != AuthRole::None
+            || authenticateCredentialsForTest("S7777", changedPassword) != AuthRole::Student) {
+            return false;
+        }
+
+        loginAsAdminForTest("admin");
+        const QString resetPassword = resetStudentPasswordForAdminForTest("S7777");
+        return !resetPassword.isEmpty()
+            && resetPassword != changedPassword
+            && authenticateCredentialsForTest("S7777", resetPassword) == AuthRole::Student;
+    }
+
+    bool darkModeHealthyForTest()
+    {
+        const QString lightStyle = qApp->styleSheet();
+        if (!lightStyle.contains("theme=\"dark\"")) {
+            return false;
+        }
+
+        setDarkModeForTest(true);
+        const bool darkApplied = property("theme").toString() == "dark"
+            && qApp->styleSheet().contains("#0F1715");
+        setDarkModeForTest(false);
+        return darkApplied && property("theme").toString() == "light";
+    }
+
+    bool scopedStudentEditingHealthyForTest()
+    {
+        loginAsAdminForTest("northadmin");
+        showPageForTest(1);
+        refreshAll();
+
+        m_selectedStudentId = "S1004";
+        openSelectedStudentProfile();
+        updateSelectedStudentProfile();
+        const bool outOfDistrictReadable = m_profileNameLabel != nullptr
+            && m_profileNameLabel->text().contains("Yanis");
+        const bool outOfDistrictLocked = m_profileNameInput != nullptr
+            && !m_profileNameInput->isEnabled()
+            && m_profileYearInput != nullptr
+            && !m_profileYearInput->isEnabled();
+        if (!outOfDistrictReadable || !outOfDistrictLocked) {
+            return false;
+        }
+
+        try {
+            m_profileNameInput->setText("Blocked Edit");
+            saveSelectedStudent();
+        } catch (...) {
+            return false;
+        }
+        if (m_university.student("S1004").fullName() == "Blocked Edit") {
+            return false;
+        }
+
+        m_selectedStudentId = "S1001";
+        updateSelectedStudentProfile();
+        const bool inDistrictEditable = m_profileNameInput != nullptr && m_profileNameInput->isEnabled();
+        if (m_studentProfileDialog != nullptr) {
+            m_studentProfileDialog->close();
+        }
+        return inDistrictEditable;
     }
 
     bool uiHardeningHealthyForTest()
@@ -2513,6 +3035,21 @@ private:
         return m_role;
     }
 
+    void changeCurrentStudentPasswordForTest(const QString &currentPassword, const QString &newPassword)
+    {
+        changeCurrentStudentPassword(currentPassword, newPassword);
+    }
+
+    QString resetStudentPasswordForAdminForTest(const QString &studentId)
+    {
+        return resetStudentPasswordForAdmin(studentId);
+    }
+
+    void setDarkModeForTest(bool enabled)
+    {
+        setDarkMode(enabled, false);
+    }
+
     void logout()
     {
         m_role = AuthRole::None;
@@ -2613,6 +3150,7 @@ private:
         }
 
         layout->addStretch();
+        layout->addWidget(buildThemeButton(sidebar));
         auto *logoutButton = new QPushButton(m_sidebarCollapsed ? QString() : "Log out", sidebar);
         logoutButton->setProperty("nav", true);
         logoutButton->setProperty("compactNav", m_sidebarCollapsed);
@@ -2701,6 +3239,8 @@ private:
             layout->addWidget(buildStudentInfoTile("Restaurant Menu", "No access", "Restaurant access requires a room assignment.", "Locked"), 1);
         }
 
+        // The student view can grow when the next-week schedule is shown; keep
+        // it scrollable while preserving the custom app chrome.
         auto *scroll = new QScrollArea(root);
         scroll->setObjectName("studentPortalScroll");
         scroll->setWidgetResizable(true);
@@ -2738,6 +3278,15 @@ private:
             sideLayout->addWidget(label("Room status\nMeal access\nResident record", "brandSub", sidebar));
         }
         sideLayout->addStretch();
+        auto *passwordButton = new QPushButton(m_sidebarCollapsed ? "P" : "Change password", sidebar);
+        passwordButton->setProperty("nav", true);
+        passwordButton->setProperty("compactNav", m_sidebarCollapsed);
+        passwordButton->setMinimumHeight(44);
+        passwordButton->setMinimumWidth(m_sidebarCollapsed ? 48 : 0);
+        passwordButton->setToolTip("Change password");
+        connect(passwordButton, &QPushButton::clicked, this, [this] { openChangePasswordDialog(); });
+        sideLayout->addWidget(passwordButton);
+        sideLayout->addWidget(buildThemeButton(sidebar));
         auto *logoutButton = new QPushButton(m_sidebarCollapsed ? QString() : "Log out", sidebar);
         logoutButton->setProperty("nav", true);
         logoutButton->setProperty("compactNav", m_sidebarCollapsed);
@@ -2751,6 +3300,61 @@ private:
         connect(logoutButton, &QPushButton::clicked, this, [this] { logout(); });
         sideLayout->addWidget(logoutButton);
         return sidebar;
+    }
+
+    void openChangePasswordDialog()
+    {
+        QDialog dialog(this);
+        dialog.setWindowTitle("Change Password");
+        dialog.setModal(true);
+        dialog.resize(460, 300);
+
+        auto *layout = new QVBoxLayout(&dialog);
+        layout->setContentsMargins(20, 18, 20, 18);
+        layout->setSpacing(12);
+        layout->addWidget(classLabel("Change Password", "cardTitle"));
+
+        auto *currentInput = new QLineEdit(&dialog);
+        currentInput->setEchoMode(QLineEdit::Password);
+        currentInput->setMinimumHeight(40);
+        auto *newInput = new QLineEdit(&dialog);
+        newInput->setEchoMode(QLineEdit::Password);
+        newInput->setMinimumHeight(40);
+        auto *confirmInput = new QLineEdit(&dialog);
+        confirmInput->setEchoMode(QLineEdit::Password);
+        confirmInput->setMinimumHeight(40);
+        layout->addWidget(fieldLabel("Current password", currentInput));
+        layout->addWidget(fieldLabel("New password", newInput));
+        layout->addWidget(fieldLabel("Confirm new password", confirmInput));
+
+        auto *status = classLabel("", "muted");
+        status->setStyleSheet("color: #B42318;");
+        layout->addWidget(status);
+
+        auto *actions = new QHBoxLayout();
+        actions->addStretch();
+        auto *cancel = new QPushButton("Cancel", &dialog);
+        auto *save = new QPushButton("Save password", &dialog);
+        save->setProperty("class", "primary");
+        actions->addWidget(cancel);
+        actions->addWidget(save);
+        layout->addLayout(actions);
+
+        connect(cancel, &QPushButton::clicked, &dialog, &QDialog::reject);
+        connect(save, &QPushButton::clicked, &dialog, [this, &dialog, currentInput, newInput, confirmInput, status] {
+            if (newInput->text() != confirmInput->text()) {
+                status->setText("New password confirmation does not match.");
+                return;
+            }
+            try {
+                changeCurrentStudentPassword(currentInput->text(), newInput->text());
+                dialog.accept();
+            } catch (const DomainError &error) {
+                status->setText(error.what());
+            }
+        });
+
+        dialog.exec();
     }
 
     QWidget *buildStudentHeroCard(const Student &student)
@@ -2822,6 +3426,8 @@ private:
         auto *layout = new QVBoxLayout(box);
         layout->setContentsMargins(12, 12, 12, 12);
         layout->setSpacing(7);
+        // Saved menus may carry an image path, but custom/empty menus fall back
+        // to keyword matching so every student card remains visual.
         const QString resolvedImageUrl = imageUrl.trimmed().isEmpty()
             ? mealImageForDescription(description, meal.toLower())
             : imageUrl;
@@ -3439,28 +4045,33 @@ private:
         connect(m_profileNameInput, &QLineEdit::textEdited, this, [this] { markStudentProfileDirty(); });
         connect(m_profileYearInput, &QSpinBox::valueChanged, this, [this] { markStudentProfileDirty(); });
 
-        auto *save = new QPushButton("Save changes", box);
-        save->setProperty("class", "primary");
-        save->setMinimumHeight(36);
-        connect(save, &QPushButton::clicked, this, [this] { saveSelectedStudent(); });
-        profileLayout->addWidget(save);
+        m_profileSaveButton = new QPushButton("Save changes", box);
+        m_profileSaveButton->setProperty("class", "primary");
+        m_profileSaveButton->setMinimumHeight(36);
+        connect(m_profileSaveButton, &QPushButton::clicked, this, [this] { saveSelectedStudent(); });
+        profileLayout->addWidget(m_profileSaveButton);
 
         auto *utilityRow = new QHBoxLayout();
         utilityRow->setSpacing(8);
-        auto *reset = new QPushButton("Reset edits", box);
-        auto *duplicate = new QPushButton("Duplicate", box);
-        auto *deleteButton = new QPushButton("Delete", box);
-        deleteButton->setProperty("class", "danger");
-        reset->setFixedHeight(36);
-        duplicate->setFixedHeight(36);
-        deleteButton->setFixedHeight(36);
-        utilityRow->addWidget(reset);
-        utilityRow->addWidget(duplicate);
-        utilityRow->addWidget(deleteButton);
+        m_profileResetEditsButton = new QPushButton("Reset edits", box);
+        m_profileDuplicateButton = new QPushButton("Duplicate", box);
+        m_profileDeleteButton = new QPushButton("Delete", box);
+        m_profileDeleteButton->setProperty("class", "danger");
+        m_profileResetEditsButton->setFixedHeight(36);
+        m_profileDuplicateButton->setFixedHeight(36);
+        m_profileDeleteButton->setFixedHeight(36);
+        utilityRow->addWidget(m_profileResetEditsButton);
+        utilityRow->addWidget(m_profileDuplicateButton);
+        utilityRow->addWidget(m_profileDeleteButton);
         profileLayout->addLayout(utilityRow);
-        connect(reset, &QPushButton::clicked, this, [this] { resetSelectedStudentEdits(); });
-        connect(duplicate, &QPushButton::clicked, this, [this] { duplicateSelectedStudent(); });
-        connect(deleteButton, &QPushButton::clicked, this, [this] { deleteSelectedStudent(); });
+        connect(m_profileResetEditsButton, &QPushButton::clicked, this, [this] { resetSelectedStudentEdits(); });
+        connect(m_profileDuplicateButton, &QPushButton::clicked, this, [this] { duplicateSelectedStudent(); });
+        connect(m_profileDeleteButton, &QPushButton::clicked, this, [this] { deleteSelectedStudent(); });
+
+        m_profileResetPasswordButton = new QPushButton("Reset student password", box);
+        m_profileResetPasswordButton->setMinimumHeight(36);
+        connect(m_profileResetPasswordButton, &QPushButton::clicked, this, [this] { resetSelectedStudentPassword(); });
+        profileLayout->addWidget(m_profileResetPasswordButton);
 
         profileLayout->addWidget(classLabel("Accommodation Actions", "cardTitle"));
         m_profileAssignDormitoryInput = createDropdown(box);
@@ -3473,17 +4084,17 @@ private:
 
         auto *actionRow = new QHBoxLayout();
         actionRow->setSpacing(8);
-        auto *assign = new QPushButton("Assign", box);
-        assign->setProperty("class", "primary");
-        auto *remove = new QPushButton("Remove", box);
-        remove->setProperty("class", "danger");
-        assign->setFixedHeight(36);
-        remove->setFixedHeight(36);
-        actionRow->addWidget(assign);
-        actionRow->addWidget(remove);
+        m_profileAssignButton = new QPushButton("Assign", box);
+        m_profileAssignButton->setProperty("class", "primary");
+        m_profileRemoveButton = new QPushButton("Remove", box);
+        m_profileRemoveButton->setProperty("class", "danger");
+        m_profileAssignButton->setFixedHeight(36);
+        m_profileRemoveButton->setFixedHeight(36);
+        actionRow->addWidget(m_profileAssignButton);
+        actionRow->addWidget(m_profileRemoveButton);
         profileLayout->addLayout(actionRow);
-        connect(assign, &QPushButton::clicked, this, [this] { assignSelectedStudent(); });
-        connect(remove, &QPushButton::clicked, this, [this] { removeSelectedAssignment(); });
+        connect(m_profileAssignButton, &QPushButton::clicked, this, [this] { assignSelectedStudent(); });
+        connect(m_profileRemoveButton, &QPushButton::clicked, this, [this] { removeSelectedAssignment(); });
         connect(m_profileAssignDormitoryInput, &QComboBox::currentIndexChanged, this, [this] { updateSuggestedRoomNumber(); });
         m_profileStatusLabel = classLabel("", "muted");
         m_profileStatusLabel->setWordWrap(true);
@@ -3578,9 +4189,9 @@ private:
         m_breakfastInput->setPlaceholderText("Coffee and eggs");
         m_lunchInput->setPlaceholderText("Chicken and rice");
         m_dinnerInput->setPlaceholderText("Soup and salad");
-        m_breakfastImageUrlInput->setPlaceholderText(":/icons/meal-breakfast.png");
-        m_lunchImageUrlInput->setPlaceholderText(":/icons/meal-lunch.png");
-        m_dinnerImageUrlInput->setPlaceholderText(":/icons/meal-dinner.png");
+        m_breakfastImageUrlInput->setPlaceholderText(":/icons/meal-eggs-toast.png");
+        m_lunchImageUrlInput->setPlaceholderText(":/icons/meal-chicken-rice.png");
+        m_dinnerImageUrlInput->setPlaceholderText(":/icons/meal-soup.png");
 
         formLayout->addWidget(fieldLabel("Dormitory", m_menuDormitoryInput));
         formLayout->addWidget(fieldLabel("Date", m_menuDateInput));
@@ -3669,7 +4280,7 @@ private:
         row->setContentsMargins(0, 0, 0, 0);
         row->setSpacing(6);
         input->setMinimumHeight(38);
-        input->setToolTip("Use a bundled Qt resource path such as :/icons/meal-lunch.png.");
+        input->setToolTip("Use a bundled Qt resource path such as :/icons/meal-chicken-rice.png.");
         auto *clear = new QPushButton("Clear", wrap);
         row->addWidget(input, 1);
         row->addWidget(clear);
@@ -3728,6 +4339,8 @@ private:
         if (currentAdminHasFullAccess()) {
             return true;
         }
+        // Scoped admins are limited to the neighborhood IDs attached to their profile.
+        // Every filtered table and mutating admin action reuses this same rule.
         return !m_currentAdminUsername.isEmpty()
             && m_adminProfiles.value(m_currentAdminUsername).neighborhoodIds.contains(neighborhoodId);
     }
@@ -3780,9 +4393,9 @@ private:
 
         m_cachedVisibleStudents.clear();
         for (const Student &student : m_university.students()) {
-            if (!student.isAssigned() || currentAdminCanAccessDormitory(student.dormitoryId().value())) {
-                m_cachedVisibleStudents.append(student);
-            }
+            // Student search is global for staff awareness. District limits are
+            // enforced when a mutating action is attempted or controls render.
+            m_cachedVisibleStudents.append(student);
         }
         m_visibilityCacheDirty = false;
     }
@@ -3839,21 +4452,23 @@ private:
 
     void addStudent()
     {
-        runAction([this] {
-            const QString newStudentId = m_studentIdInput->text().trimmed().toUpper();
-            if (newStudentId.isEmpty() || m_studentNameInput->text().trimmed().isEmpty()) {
-                throw DomainError("Student ID and full name are required.");
-            }
-            m_university.addStudent(Student(
+        QString generatedPassword;
+        QString newStudentId;
+        runAction([this, &generatedPassword, &newStudentId] {
+            newStudentId = m_studentIdInput->text().trimmed().toUpper();
+            generatedPassword = addStudentRecord(
                 newStudentId,
                 m_studentNameInput->text().trimmed(),
-                m_academicYearInput->value()));
+                m_academicYearInput->value());
             m_selectedStudentId = newStudentId;
             m_studentSearchInput->setText(newStudentId);
             m_studentIdInput->clear();
             m_studentNameInput->clear();
             setStudentPanelMessage("Student added.");
         });
+        if (!generatedPassword.isEmpty()) {
+            displayGeneratedStudentPassword(newStudentId, generatedPassword);
+        }
     }
 
     void openAddStudentDialog()
@@ -3908,7 +4523,7 @@ private:
             }
 
             try {
-                m_university.addStudent(Student(newStudentId, fullName, yearInput->value()));
+                const QString generatedPassword = addStudentRecord(newStudentId, fullName, yearInput->value());
                 m_selectedStudentId = newStudentId;
                 saveAppState();
                 refreshAll();
@@ -3917,6 +4532,7 @@ private:
                 }
                 selectStudentRow(newStudentId);
                 dialog.accept();
+                displayGeneratedStudentPassword(newStudentId, generatedPassword);
             } catch (const DomainError &error) {
                 status->setText(error.what());
             }
@@ -3929,6 +4545,7 @@ private:
     {
         runAction([this] {
             Student &student = selectedStudent();
+            requireCanEditStudent(student);
             if (m_profileNameInput->text().trimmed().isEmpty()) {
                 throw DomainError("Student full name is required.");
             }
@@ -3950,11 +4567,14 @@ private:
     {
         runAction([this] {
             const Student &student = selectedStudent();
+            requireCanEditStudent(student);
             const QString newId = nextStudentId();
             m_university.addStudent(Student(newId, student.fullName() + " Copy", student.academicYear()));
+            const QString generatedPassword = createStudentCredential(newId);
             m_selectedStudentId = newId;
             m_studentSearchInput->setText(newId);
             setStudentPanelMessage("Student duplicated as " + newId + ".");
+            displayGeneratedStudentPassword(newId, generatedPassword);
         });
     }
 
@@ -3978,7 +4598,9 @@ private:
 
         runAction([this] {
             const QString removedId = m_selectedStudentId;
+            requireCanEditStudent(m_university.student(removedId));
             m_university.removeStudent(removedId);
+            m_studentCredentials.remove(removedId);
             m_selectedStudentId.clear();
             if (m_studentSearchInput != nullptr && m_studentSearchInput->text().trimmed().compare(removedId, Qt::CaseInsensitive) == 0) {
                 m_studentSearchInput->clear();
@@ -3987,10 +4609,23 @@ private:
         });
     }
 
+    void resetSelectedStudentPassword()
+    {
+        runAction([this] {
+            const Student &student = selectedStudent();
+            const QString password = resetStudentPasswordForAdmin(student.id());
+            setStudentPanelMessage("Password reset for " + student.id() + ".");
+            if (isAutomationMode()) {
+                showStatus("Generated password: " + password);
+            }
+        });
+    }
+
     void assignSelectedStudent()
     {
         runAction([this] {
             Student &student = selectedStudent();
+            requireCanEditStudent(student);
             if (student.isAssigned()) {
                 throw DomainError("Remove this student's current room before assigning a new one.");
             }
@@ -4007,6 +4642,7 @@ private:
     {
         runAction([this] {
             Student &student = selectedStudent();
+            requireCanEditStudent(student);
             if (student.isAssigned() && !currentAdminCanAccessDormitory(student.dormitoryId().value())) {
                 throw DomainError("This admin cannot remove assignments in that dormitory.");
             }
@@ -4018,6 +4654,8 @@ private:
     void assignStudent()
     {
         runAction([this] {
+            Student &targetStudent = m_university.student(m_assignStudentInput->currentData().toString());
+            requireCanEditStudent(targetStudent);
             if (!currentAdminCanAccessDormitory(m_assignDormitoryInput->currentData().toString())) {
                 throw DomainError("This admin cannot assign students in that dormitory.");
             }
@@ -4033,6 +4671,7 @@ private:
     {
         runAction([this] {
             const Student &targetStudent = m_university.student(m_assignStudentInput->currentData().toString());
+            requireCanEditStudent(targetStudent);
             if (targetStudent.isAssigned() && !currentAdminCanAccessDormitory(targetStudent.dormitoryId().value())) {
                 throw DomainError("This admin cannot remove assignments in that dormitory.");
             }
@@ -4176,6 +4815,8 @@ private:
             Neighborhood copy{id, name, {}};
             QVector<Dormitory> newDormitories;
             int dormIndex = 1;
+            // Build the copied dormitories first. If validation fails halfway,
+            // the original neighborhood remains unchanged.
             for (const QString &sourceDormitoryId : source->dormitoryIds) {
                 const Dormitory &sourceDormitory = m_university.dormitory(sourceDormitoryId);
                 const QString newDormitoryId = id + "-D" + QString::number(dormIndex);
@@ -4287,12 +4928,16 @@ private:
     {
         try {
             action();
+            // Most actions can affect filtered tables or persisted state, so a
+            // successful action always refreshes caches, disk, and the visible UI.
             invalidateVisibilityCache();
             saveAppState();
             refreshAll();
         } catch (const DomainError &error) {
             setStudentPanelMessage(error.what(), true);
-            showWarningMessage(this, "Rule feedback", error.what());
+            if (!isAutomationMode()) {
+                showWarningMessage(this, "Rule feedback", error.what());
+            }
         }
     }
 
@@ -5057,6 +5702,13 @@ private:
             m_studentProfileDialog = nullptr;
             m_profileAssignDormitoryInput = nullptr;
             m_profileAssignRoomInput = nullptr;
+            m_profileSaveButton = nullptr;
+            m_profileResetEditsButton = nullptr;
+            m_profileDuplicateButton = nullptr;
+            m_profileDeleteButton = nullptr;
+            m_profileAssignButton = nullptr;
+            m_profileRemoveButton = nullptr;
+            m_profileResetPasswordButton = nullptr;
             m_studentProfileDirty = false;
         });
         updateSelectedStudentProfile();
@@ -5109,19 +5761,51 @@ private:
         m_profileYearInput->setValue(student.academicYear());
         m_loadingStudentProfile = false;
         m_studentProfileDirty = false;
-        setProfileControlsEnabled(true);
+        setProfileControlsEnabled(canEditStudent(student));
     }
 
     void setProfileControlsEnabled(bool enabled)
     {
         m_profileNameInput->setEnabled(enabled);
         m_profileYearInput->setEnabled(enabled);
+        if (m_profileSaveButton != nullptr) {
+            m_profileSaveButton->setEnabled(enabled);
+        }
+        if (m_profileResetEditsButton != nullptr) {
+            m_profileResetEditsButton->setEnabled(enabled);
+        }
+        if (m_profileDuplicateButton != nullptr) {
+            m_profileDuplicateButton->setEnabled(enabled);
+        }
+        if (m_profileDeleteButton != nullptr) {
+            m_profileDeleteButton->setEnabled(enabled);
+        }
+        if (m_profileAssignButton != nullptr) {
+            m_profileAssignButton->setEnabled(enabled);
+        }
+        if (m_profileRemoveButton != nullptr) {
+            m_profileRemoveButton->setEnabled(enabled);
+        }
+        if (m_profileResetPasswordButton != nullptr) {
+            m_profileResetPasswordButton->setEnabled(enabled && currentAdminHasFullAccess());
+            m_profileResetPasswordButton->setToolTip(currentAdminHasFullAccess()
+                ? "Generate a new one-time student password"
+                : "Only the head operator can reset student passwords");
+        }
         if (m_profileAssignDormitoryInput != nullptr) {
             m_profileAssignDormitoryInput->setEnabled(enabled);
         }
         if (m_profileAssignRoomInput != nullptr) {
             m_profileAssignRoomInput->setEnabled(enabled);
         }
+    }
+
+    bool canEditStudent(const Student &student) const
+    {
+        if (currentAdminHasFullAccess()) {
+            return true;
+        }
+        return !student.isAssigned() || currentAdminCanAccessDormitory(student.dormitoryId().value());
     }
 
     QString roomDetailText(const Student &student) const
@@ -5215,7 +5899,7 @@ private:
         QPixmap pixmap(urlText);
         if (pixmap.isNull()) {
             thumbnail->setText("Image");
-            thumbnail->setToolTip("Use a Qt resource path such as :/icons/meal-lunch.png.");
+            thumbnail->setToolTip("Use a Qt resource path such as :/icons/meal-chicken-rice.png.");
             return thumbnail;
         }
 
@@ -5401,6 +6085,27 @@ bool runRequestedSelfTest(const QStringList &arguments, int &exitCode)
         });
         return true;
     }
+    if (arguments.contains("--student-account-workflows-self-test")) {
+        exitCode = runSelfTestWithTempData([](const QString &path) {
+            DormitoryWindow window(path);
+            return window.studentAccountWorkflowsHealthyForTest();
+        });
+        return true;
+    }
+    if (arguments.contains("--dark-mode-self-test")) {
+        exitCode = runSelfTestWithTempData([](const QString &path) {
+            DormitoryWindow window(path);
+            return window.darkModeHealthyForTest();
+        });
+        return true;
+    }
+    if (arguments.contains("--scoped-student-editing-self-test")) {
+        exitCode = runSelfTestWithTempData([](const QString &path) {
+            DormitoryWindow window(path);
+            return window.scopedStudentEditingHealthyForTest();
+        });
+        return true;
+    }
     if (arguments.contains("--ui-hardening-self-test")) {
         exitCode = runSelfTestWithTempData([](const QString &path) {
             DormitoryWindow window(path);
@@ -5512,7 +6217,7 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     qApp->setFont(QFont("Times New Roman", 10));
-    qApp->setStyleSheet(kAppStyle);
+    qApp->setStyleSheet(appStyleSheet());
 
     const QStringList arguments = QCoreApplication::arguments();
     int selfTestExitCode = 0;

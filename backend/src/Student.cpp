@@ -6,6 +6,8 @@ namespace udrms {
 
 namespace {
 
+// Student JSON is intentionally strict because assignment data must stay
+// consistent with room membership during load.
 QString requiredString(const QJsonObject &object, const char *field)
 {
     const QJsonValue value = object.value(field);
@@ -103,6 +105,8 @@ Student Student::fromJson(const QJsonObject &object)
 
     const bool hasDormitoryId = object.contains("dormitoryId");
     const bool hasRoomNumber = object.contains("roomNumber");
+    // A student assignment only makes sense when both sides are present; a
+    // partial assignment would later break University::validateIntegrity().
     if (hasDormitoryId != hasRoomNumber) {
         throw DomainError("Student JSON assignment must include both dormitoryId and roomNumber.");
     }

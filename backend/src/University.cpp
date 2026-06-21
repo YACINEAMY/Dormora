@@ -10,6 +10,8 @@ namespace udrms {
 
 namespace {
 
+// University is the root JSON object, so invalid arrays here mean the saved
+// file cannot be trusted and should be rejected before use.
 QJsonArray requiredArray(const QJsonObject &object, const char *field)
 {
     const QJsonValue value = object.value(field);
@@ -94,6 +96,8 @@ void University::removeDormitory(const QString &dormitoryId)
     if (targetDormitory.totalOccupancy() > 0) {
         throw DomainError("Cannot remove a dormitory that still has residents.");
     }
+    // Also check student records because a manually edited JSON file could have
+    // stale assignments even if room occupancy appears empty.
     for (const Student &student : m_students) {
         if (student.dormitoryId().has_value() && student.dormitoryId().value() == dormitoryId) {
             throw DomainError("Cannot remove a dormitory referenced by assigned students.");

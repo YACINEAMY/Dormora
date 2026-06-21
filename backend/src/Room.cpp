@@ -10,6 +10,8 @@ namespace udrms {
 
 namespace {
 
+// Local JSON readers validate the expected schema before domain objects are
+// reconstructed. This keeps corrupted files from creating half-valid rooms.
 int requiredInt(const QJsonObject &object, const char *field)
 {
     const QJsonValue value = object.value(field);

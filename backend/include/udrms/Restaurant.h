@@ -34,6 +34,9 @@ public:
     // Replaces the menu for the date; all three meal fields must be non-empty.
     void setMenu(const QDate &date, const DailyMenu &menu);
     std::optional<DailyMenu> menuForDate(const QDate &date) const;
+    // Exposes a copy for GUI migrations/reports without allowing callers to
+    // mutate restaurant state without validation.
+    QMap<QDate, DailyMenu> menus() const;
 
     void recordMealServed(const QDate &date, int count = 1);
     int mealsServedOn(const QDate &date) const;

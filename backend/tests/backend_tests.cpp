@@ -100,16 +100,16 @@ static void verifyRestaurantComponent()
         {"breakfast", "Milk"},
         {"lunch", "Pasta"},
         {"dinner", "Fish"},
-        {"breakfastImageUrl", ":/icons/meal-breakfast.png"},
-        {"lunchImageUrl", ":/icons/meal-lunch.png"},
-        {"dinnerImageUrl", ":/icons/meal-dinner.png"},
+        {"breakfastImageUrl", ":/icons/meal-eggs-toast.png"},
+        {"lunchImageUrl", ":/icons/meal-pasta.png"},
+        {"dinnerImageUrl", ":/icons/meal-fish-rice.png"},
     };
     const QJsonObject roundTrippedMenu = DailyMenu::fromJson(menuWithImages).toJson();
-    require(roundTrippedMenu.value("breakfastImageUrl").toString() == ":/icons/meal-breakfast.png",
+    require(roundTrippedMenu.value("breakfastImageUrl").toString() == ":/icons/meal-eggs-toast.png",
             "daily menu preserves breakfast image path");
-    require(roundTrippedMenu.value("lunchImageUrl").toString() == ":/icons/meal-lunch.png",
+    require(roundTrippedMenu.value("lunchImageUrl").toString() == ":/icons/meal-pasta.png",
             "daily menu preserves lunch image path");
-    require(roundTrippedMenu.value("dinnerImageUrl").toString() == ":/icons/meal-dinner.png",
+    require(roundTrippedMenu.value("dinnerImageUrl").toString() == ":/icons/meal-fish-rice.png",
             "daily menu preserves dinner image path");
 
     require(!restaurant.menuForDate(today.addDays(1)).has_value(), "restaurant returns no menu for missing date");

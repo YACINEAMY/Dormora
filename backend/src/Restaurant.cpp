@@ -11,6 +11,8 @@ namespace udrms {
 
 namespace {
 
+// Restaurant JSON contains nested dated menus and meal counters. These helpers
+// keep parsing errors specific enough to show meaningful GUI feedback.
 QString requiredString(const QJsonObject &object, const char *field, const QString &context)
 {
     const QJsonValue value = object.value(field);
@@ -133,6 +135,13 @@ std::optional<DailyMenu> Restaurant::menuForDate(const QDate &date) const
         return std::nullopt;
     }
     return m_menus.value(date);
+}
+
+QMap<QDate, DailyMenu> Restaurant::menus() const
+{
+    // Return a copy so callers can inspect dated menus without bypassing the
+    // validation in setMenu().
+    return m_menus;
 }
 
 void Restaurant::recordMealServed(const QDate &date, int count)
