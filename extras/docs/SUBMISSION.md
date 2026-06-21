@@ -27,9 +27,9 @@ The code is separated into:
 | Global admin | `admin` | `admin123` |
 | North campus admin | `northadmin` | `north123` |
 | South campus admin | `southadmin` | `south123` |
-| Student | `S1001` | `student123` |
+| Student | Any student ID, for example `S1001` | Generated or reset by the global admin |
 
-Any seeded student ID can use `student123`.
+Student passwords are not shared demo passwords. To test a student account, login as `admin`, open the student's profile, use **Reset student password**, and sign in with the temporary password shown by the GUI.
 
 ## How To Build From Source
 
@@ -77,7 +77,8 @@ This recreates:
 - `extras/docs/assignment-compliance.md` - requirement checklist.
 - `extras/docs/presentation-readiness-audit.md` - final required-vs-optional change list.
 - `extras/docs/interview-preparation.md` - oral review explanations and likely Q&A.
-UML files are finalized separately before the final professor submission.
+- `extras/docs/uml-class-diagram.puml` and `.svg` - UML class diagram.
+- `extras/docs/uml-room-assignment-sequence.puml` - optional room assignment sequence diagram.
 
 ## Notes
 

@@ -102,7 +102,7 @@ This reflects the PDF requirement that the restaurant is part of the dormitory a
 
 ## Persistence
 
-Data is saved as JSON. The saved data includes students, dormitories, rooms, room memberships, restaurant menus, meal counts, neighborhoods, admin profiles, and student portal password. When data is loaded, `University::validateIntegrity()` checks that student assignments and room memberships match.
+Data is saved as JSON. The saved data includes students, dormitories, rooms, room memberships, restaurant menus, meal counts, neighborhoods, admin profiles, and student portal passwords. When data is loaded, `University::validateIntegrity()` checks that student assignments and room memberships match.
 
 ## Testing
 
@@ -221,7 +221,7 @@ Sorted output makes the GUI predictable, JSON files stable, and tests reliable.
 
 ### How do you know the project fulfills the PDF?
 
-`extras/docs/assignment-compliance.md` maps each PDF requirement to a code feature or document. The project includes OOP classes, Qt GUI, local persistence, tests, data structures, and error handling. UML documentation is the remaining presentation document to finalize.
+`extras/docs/assignment-compliance.md` maps each PDF requirement to a code feature or document. The project includes OOP classes, Qt GUI, local persistence, tests, data structures, error handling, and UML documentation under `extras/docs/`.
 
 ## Quick Demo Path
 
@@ -230,4 +230,4 @@ Sorted output makes the GUI predictable, JSON files stable, and tests reliable.
 3. Show the Residents page and search for a student.
 4. Open a student profile and explain room assignment.
 5. Show the Meals page and explain that menus belong to dormitory restaurants.
-6. Login as student `S1001` / `student123` and show resident-only menu access, including today's meal cards and the next 7 days of menus.
+6. Reset a student password as the global admin, then login with that student ID and the generated temporary password to show resident-only menu access, today's meal cards, and the next 7 days of menus.

@@ -13,7 +13,7 @@ This checklist maps the project to the requirements from the professor's Univers
 | Provide a graphical user interface | `frontend/src/gui_main.cpp` implements the Qt Widgets GUI with login, admin, and student workflows. |
 | Use appropriate data structures | `QHash` supports fast ID lookups, `QMap` stores menus by date, `QSet` tracks room residents, and `QVector` returns stable ordered lists. |
 | Test functionality | `backend/tests/backend_tests.cpp` and CTest cover room assignment, capacity limits, restaurant access, persistence, and GUI smoke checks. |
-| Create UML diagrams | Pending final diagram review before submission. |
+| Create UML diagrams | UML class and room-assignment sequence diagrams are included under `extras/docs/`. |
 
 ## Required Features
 
@@ -41,7 +41,7 @@ This checklist maps the project to the requirements from the professor's Univers
 - **Functionality:** covered by backend logic, GUI workflows, and tests.
 - **OOP principles:** visible in the class design, ownership boundaries, and validation methods.
 - **Graphical interface:** Qt Widgets provides forms, buttons, tables, dialogs, and clear navigation.
-- **UML documentation:** pending final diagram review before submission.
+- **UML documentation:** class and sequence diagrams are included under `extras/docs/`.
 - **Code organization:** backend files are split by class; GUI, resources, helper scripts, examples, and docs are separated.
 - **Error handling:** invalid IDs, capacities, assignments, menus, JSON, and access attempts throw `DomainError` and are surfaced in the GUI.
 - **Performance:** ID-based `QHash` lookups and set/map containers avoid slow full-list scans for common operations.

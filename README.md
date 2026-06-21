@@ -128,13 +128,15 @@ These accounts are included for local coursework demonstration:
 | Global admin | `admin` | `admin123` |
 | North campus admin | `northadmin` | `north123` |
 | South campus admin | `southadmin` | `south123` |
-| Student | Any seeded student ID, for example `S1001` | `student123` |
+| Student | Any student ID, for example `S1001` | Generated in the GUI |
 
 ## Data Storage
 
 The application stores local data in JSON format. This keeps the project simple to review, easy to run without a database server, and suitable for coursework submission.
 
 Generated local data and build output are ignored by git.
+
+Student passwords are generated when a student account is created. The global administrator can also reset a student's password from the student profile dialog; the new temporary password is shown once and can then be used for student login.
 
 ## Packaging
 

@@ -2,6 +2,13 @@
 #include "udrms/AppState.h"
 #include "udrms/University.h"
 
+// Dormora GUI
+// -----------
+// This file contains the Qt interface for the university dormitory and
+// restaurant management project. The backend classes stay in backend/, while
+// this window connects them to forms, tables, validation messages, and local
+// JSON persistence.
+
 #include <QApplication>
 #include <QButtonGroup>
 #include <QComboBox>
@@ -63,6 +70,10 @@
 using namespace udrms;
 
 namespace {
+
+// ============================================================================
+// Application styling and small helper widgets
+// ============================================================================
 
 const char *kAppStyle = R"(
 * {
@@ -646,125 +657,6 @@ QProgressBar#startupProgress::chunk {
 }
 )";
 
-const char *kDarkThemeStyle = R"(
-QMainWindow[theme="dark"] QFrame#windowChrome,
-QMainWindow[theme="dark"] QWidget#appRoot,
-QMainWindow[theme="dark"] QWidget#loginRoot,
-QMainWindow[theme="dark"] QWidget#contentPane,
-QMainWindow[theme="dark"] QWidget#studentRoot,
-QMainWindow[theme="dark"] QWidget#studentContentPane,
-QMainWindow[theme="dark"] QDialog {
-    background: #0F1715;
-    color: #E7F2EE;
-}
-QMainWindow[theme="dark"] QFrame.card,
-QMainWindow[theme="dark"] QFrame[class="card"],
-QMainWindow[theme="dark"] QFrame#pageHeader,
-QMainWindow[theme="dark"] QFrame#metricCard,
-QMainWindow[theme="dark"] QFrame#studentCard,
-QMainWindow[theme="dark"] QFrame#studentInfoTile,
-QMainWindow[theme="dark"] QFrame#studentMealCard,
-QMainWindow[theme="dark"] QFrame#studentWeekMenuCard {
-    background: #16231F;
-    border-color: #2B433C;
-}
-QMainWindow[theme="dark"] QFrame#studentWeekMenuRow,
-QMainWindow[theme="dark"] QFrame#studentInlinePanel,
-QMainWindow[theme="dark"] QFrame#todayMenuItem,
-QMainWindow[theme="dark"] QFrame#mealRow {
-    background: #12201C;
-    border-color: #2B433C;
-}
-QMainWindow[theme="dark"] QLabel,
-QMainWindow[theme="dark"] QLabel#pageTitle,
-QMainWindow[theme="dark"] QLabel.cardTitle,
-QMainWindow[theme="dark"] QLabel[class="cardTitle"],
-QMainWindow[theme="dark"] QLabel.metricValue,
-QMainWindow[theme="dark"] QLabel[class="metricValue"] {
-    color: #E7F2EE;
-}
-QMainWindow[theme="dark"] QLabel#pageKicker,
-QMainWindow[theme="dark"] QLabel.muted,
-QMainWindow[theme="dark"] QLabel[class="muted"],
-QMainWindow[theme="dark"] QLabel.metricLabel,
-QMainWindow[theme="dark"] QLabel[class="metricLabel"] {
-    color: #9CB9B0;
-}
-QMainWindow[theme="dark"] QLineEdit,
-QMainWindow[theme="dark"] QComboBox,
-QMainWindow[theme="dark"] QSpinBox,
-QMainWindow[theme="dark"] QDateEdit,
-QMainWindow[theme="dark"] QTableWidget {
-    background: #101C18;
-    border-color: #355247;
-    color: #E7F2EE;
-}
-QMainWindow[theme="dark"] QComboBox::drop-down,
-QMainWindow[theme="dark"] QDateEdit::drop-down,
-QMainWindow[theme="dark"] QSpinBox::up-button,
-QMainWindow[theme="dark"] QSpinBox::down-button {
-    background: #1B2C26;
-    border-color: #355247;
-}
-QMainWindow[theme="dark"] QComboBox QAbstractItemView {
-    background: #101C18;
-    border-color: #355247;
-    color: #E7F2EE;
-    selection-background-color: #1F7560;
-    selection-color: #FFFFFF;
-}
-QMainWindow[theme="dark"] QHeaderView::section {
-    background: #1B2C26;
-    color: #C8DDD6;
-    border-bottom-color: #355247;
-}
-QMainWindow[theme="dark"] QTableWidget::item {
-    border-bottom-color: #20342D;
-}
-QMainWindow[theme="dark"] QTableWidget::item:selected {
-    background: #214D40;
-}
-QMainWindow[theme="dark"] QPushButton {
-    background: #172822;
-    border-color: #355247;
-    color: #E7F2EE;
-}
-QMainWindow[theme="dark"] QPushButton:hover {
-    background: #203B32;
-}
-QMainWindow[theme="dark"] QPushButton.primary,
-QMainWindow[theme="dark"] QPushButton[class="primary"] {
-    background: #23876D;
-    border-color: #23876D;
-    color: #FFFFFF;
-}
-QMainWindow[theme="dark"] QPushButton.danger,
-QMainWindow[theme="dark"] QPushButton[class="danger"] {
-    color: #FFB4AA;
-    border-color: #7A352E;
-}
-QMainWindow[theme="dark"] QPushButton:disabled,
-QMainWindow[theme="dark"] QLineEdit:disabled,
-QMainWindow[theme="dark"] QComboBox:disabled,
-QMainWindow[theme="dark"] QSpinBox:disabled {
-    color: #6F8880;
-    background: #101915;
-    border-color: #253A33;
-}
-QMainWindow[theme="dark"] QLabel#appStatus,
-QMainWindow[theme="dark"] QLabel.counterValue,
-QMainWindow[theme="dark"] QLabel[class="counterValue"] {
-    background: #14231E;
-    border-color: #355247;
-    color: #CDEBE0;
-}
-)";
-
-QString appStyleSheet()
-{
-    return QString::fromLatin1(kAppStyle) + QString::fromLatin1(kDarkThemeStyle);
-}
-
 constexpr int kStartupLoadingMinimumMs = 240;
 
 QLabel *label(const QString &text, const QString &objectName = {}, QWidget *parent = nullptr)
@@ -909,7 +801,7 @@ void centerOnPrimaryScreen(QWidget *widget)
 bool startupLoadingScreenSelfTest()
 {
     qApp->setFont(QFont("Times New Roman", 10));
-    qApp->setStyleSheet(appStyleSheet());
+    qApp->setStyleSheet(kAppStyle);
 
     QWidget *loading = buildStartupLoadingScreen();
     centerOnPrimaryScreen(loading);
@@ -940,7 +832,7 @@ bool startupLoadingScreenSelfTest()
 bool messageBoxStyleSelfTest()
 {
     qApp->setFont(QFont("Times New Roman", 10));
-    qApp->setStyleSheet(appStyleSheet());
+    qApp->setStyleSheet(kAppStyle);
 
     QMessageBox box(QMessageBox::Warning,
                     "Rule feedback",
@@ -1041,6 +933,14 @@ QIcon logoutNavIcon()
 
 } // namespace
 
+// ============================================================================
+// Main application window
+// ============================================================================
+//
+// The project uses one main Qt window with stacked pages. I kept the backend
+// separate from the GUI, but grouped GUI code here because most widgets need to
+// refresh each other after a student, room, menu, or access rule changes.
+
 class DormitoryWindow final : public QMainWindow {
 public:
     explicit DormitoryWindow(QString dataFilePath = {})
@@ -1054,13 +954,12 @@ public:
         setAttribute(Qt::WA_TranslucentBackground);
         m_enableAnimations = !QCoreApplication::arguments().contains("--screenshot");
         qApp->setFont(QFont("Times New Roman", 10));
-        qApp->setStyleSheet(appStyleSheet());
+        qApp->setStyleSheet(kAppStyle);
         statusBar()->setSizeGripEnabled(false);
         statusBar()->hide();
         auto *fullscreenShortcut = new QShortcut(QKeySequence(Qt::Key_F11), this);
         connect(fullscreenShortcut, &QShortcut::activated, this, [this] { toggleFullScreen(); });
         buildLoginUi();
-        applyTheme();
         setWindowTitle("Dormora");
         setWindowIcon(QIcon(":/icons/dormora-logo.svg"));
         resize(1280, 780);
@@ -1126,6 +1025,8 @@ private:
         Student,
     };
 
+    // Core application state. The domain data is managed by University; the GUI
+    // adds login profiles, student credentials, and neighborhood access scopes.
     University m_university;
     QVector<Neighborhood> m_neighborhoods;
     QHash<QString, AdminProfile> m_adminProfiles;
@@ -1133,7 +1034,6 @@ private:
     AuthRole m_role = AuthRole::None;
     bool m_usesDefaultDataPath = false;
     QString m_dataFilePath;
-    bool m_darkMode = false;
     QString m_currentAdminUsername;
     QString m_currentStudentId;
     QPoint m_dragPosition;
@@ -1145,6 +1045,7 @@ private:
     bool m_sidebarCollapsed = false;
     bool m_enableAnimations = true;
 
+    // Main shell widgets shared by both admin and student views.
     QStackedWidget *m_stack = nullptr;
     QFrame *m_windowChrome = nullptr;
     QWidget *m_contentRoot = nullptr;
@@ -1154,6 +1055,7 @@ private:
     QLabel *m_statusLabel = nullptr;
     QWidget *m_sidebarWidget = nullptr;
 
+    // Dashboard, room, and student management controls.
     QLabel *m_residentsMetric = nullptr;
     QLabel *m_availableRoomsMetric = nullptr;
     QLabel *m_mealsMetric = nullptr;
@@ -1169,6 +1071,10 @@ private:
     QWidget *m_studentSuggestionPanel = nullptr;
     QVBoxLayout *m_studentSuggestionList = nullptr;
     QLabel *m_studentCountLabel = nullptr;
+
+    // Student profile dialog controls. These are kept as members because the
+    // dialog can be refreshed after save, duplicate, assign, remove, and reset
+    // password operations.
     QDialog *m_studentProfileDialog = nullptr;
     QLabel *m_profileNameLabel = nullptr;
     QLabel *m_profileMetaLabel = nullptr;
@@ -1186,6 +1092,8 @@ private:
     QPushButton *m_profileAssignButton = nullptr;
     QPushButton *m_profileRemoveButton = nullptr;
     QPushButton *m_profileResetPasswordButton = nullptr;
+
+    // Restaurant and neighborhood administration controls.
     QVBoxLayout *m_todayMenuSummary = nullptr;
     QTableWidget *m_neighborhoodTable = nullptr;
     QLineEdit *m_neighborhoodSearchInput = nullptr;
@@ -1203,6 +1111,7 @@ private:
     QSpinBox *m_profileAssignRoomInput = nullptr;
     QSpinBox *m_assignRoomInput = nullptr;
 
+    // Menu editor and meal counter controls.
     QComboBox *m_menuDormitoryInput = nullptr;
     QLineEdit *m_menuSearchInput = nullptr;
     QComboBox *m_menuDormitoryFilterInput = nullptr;
@@ -1218,6 +1127,8 @@ private:
     QLineEdit *m_breakfastImageUrlInput = nullptr;
     QLineEdit *m_lunchImageUrlInput = nullptr;
     QLineEdit *m_dinnerImageUrlInput = nullptr;
+
+    // Campus neighborhood and admin access controls.
     QLineEdit *m_neighborhoodIdInput = nullptr;
     QLineEdit *m_neighborhoodNameInput = nullptr;
     QComboBox *m_copyNeighborhoodInput = nullptr;
@@ -1229,6 +1140,8 @@ private:
     QComboBox *m_newAdminScopeInput = nullptr;
     QComboBox *m_newAdminNeighborhoodInput = nullptr;
     QLabel *m_newAdminStatusLabel = nullptr;
+
+    // Current selection/editing flags.
     QString m_selectedStudentId;
     bool m_studentProfileDirty = false;
     bool m_restoringStudentSelection = false;
@@ -1266,6 +1179,10 @@ private:
         const char *dinner;
     };
 
+    // ------------------------------------------------------------------------
+    // Data setup and persistence
+    // ------------------------------------------------------------------------
+
     void loadOrSeedData()
     {
         if (QFile::exists(m_dataFilePath)) {
@@ -1288,7 +1205,6 @@ private:
         m_neighborhoods.clear();
         m_adminProfiles.clear();
         m_studentCredentials.clear();
-        m_darkMode = false;
 
         Dormitory north("D1", "North Residence Hall", 100, Restaurant("North Dining Hall"));
         for (int roomNumber = 101; roomNumber <= 150; ++roomNumber) {
@@ -1861,6 +1777,10 @@ private:
             : QStringLiteral(":/icons/meal-chicken-rice.png");
     }
 
+    // ------------------------------------------------------------------------
+    // JSON save/load for GUI-owned state
+    // ------------------------------------------------------------------------
+
     QJsonObject appStateToJson() const
     {
         QJsonArray neighborhoods;
@@ -1880,7 +1800,6 @@ private:
             {"neighborhoods", neighborhoods},
             {"adminProfiles", adminProfiles},
             {"studentCredentials", studentCredentialsToJson()},
-            {"darkMode", m_darkMode},
         };
     }
 
@@ -1942,7 +1861,6 @@ private:
         m_neighborhoods = loadedNeighborhoods;
         m_adminProfiles = loadedProfiles;
         m_studentCredentials = studentCredentialsFromJson(root, loadedUniversity);
-        m_darkMode = root.value("darkMode").isBool() ? root.value("darkMode").toBool() : false;
         ensureStudentCredentials();
     }
 
@@ -1968,6 +1886,10 @@ private:
             throw DomainError("Could not commit app data file: " + file.errorString());
         }
     }
+
+    // ------------------------------------------------------------------------
+    // Frameless window behavior
+    // ------------------------------------------------------------------------
 
     int resizeEdgesAt(const QPoint &position) const
     {
@@ -2044,48 +1966,6 @@ private:
     {
         isFullScreen() ? showNormal() : showFullScreen();
         applyChromeState();
-    }
-
-    void toggleDarkMode()
-    {
-        setDarkMode(!m_darkMode, true);
-    }
-
-    void setDarkMode(bool enabled, bool persist)
-    {
-        m_darkMode = enabled;
-        applyTheme();
-        if (persist) {
-            saveAppState();
-        }
-    }
-
-    void applyTheme()
-    {
-        const QString theme = m_darkMode ? QStringLiteral("dark") : QStringLiteral("light");
-        // The stylesheet uses the dynamic theme property on the window and key
-        // roots, which keeps dark mode available to every role without
-        // duplicating page construction code.
-        auto updateSurface = [&theme](QWidget *surface) {
-            if (surface == nullptr) {
-                return;
-            }
-            surface->setProperty("theme", theme);
-            surface->style()->unpolish(surface);
-            surface->style()->polish(surface);
-            surface->update();
-        };
-
-        updateSurface(this);
-        updateSurface(m_windowChrome);
-        updateSurface(m_contentRoot);
-        if (m_windowChrome != nullptr) {
-            for (QWidget *child : m_windowChrome->findChildren<QWidget *>()) {
-                child->style()->unpolish(child);
-                child->style()->polish(child);
-                child->update();
-            }
-        }
     }
 
     void toggleSidebar()
@@ -2193,6 +2073,10 @@ private:
         }
     }
 
+    // ------------------------------------------------------------------------
+    // Login and application shell
+    // ------------------------------------------------------------------------
+
     void buildLoginUi()
     {
         m_sidebarWidget = nullptr;
@@ -2262,13 +2146,6 @@ private:
         button->setMinimumHeight(44);
         button->setProperty("class", "primary");
         loginLayout->addWidget(button);
-        auto *themeButton = new QPushButton(m_darkMode ? "Use light mode" : "Use dark mode", loginCard);
-        themeButton->setMinimumHeight(40);
-        connect(themeButton, &QPushButton::clicked, this, [this, themeButton] {
-            toggleDarkMode();
-            themeButton->setText(m_darkMode ? "Use light mode" : "Use dark mode");
-        });
-        loginLayout->addWidget(themeButton);
         m_loginFeedback = classLabel("", "muted");
         m_loginFeedback->setStyleSheet("QLabel { color: #B42318; font-weight: 700; }");
         loginLayout->addWidget(m_loginFeedback);
@@ -2285,6 +2162,10 @@ private:
         showStatus("");
     }
 
+    // ------------------------------------------------------------------------
+    // Shared widget builders
+    // ------------------------------------------------------------------------
+
     QFrame *buildWindowControls()
     {
         auto *controls = new QFrame(this);
@@ -2293,11 +2174,11 @@ private:
         layout->setContentsMargins(0, 0, 0, 0);
         layout->setSpacing(8);
 
-        auto *minimize = new QPushButton(QString::fromUtf8("−"), controls);
+        auto *minimize = new QPushButton("-", controls);
         minimize->setObjectName("windowButton");
         minimize->setText(QString(QChar(0x2212)));
         minimize->setToolTip("Minimize");
-        auto *close = new QPushButton(QString::fromUtf8("×"), controls);
+        auto *close = new QPushButton("x", controls);
         close->setObjectName("closeButton");
         close->setText(QString(QChar(0x00D7)));
         close->setToolTip("Close");
@@ -2319,21 +2200,6 @@ private:
         layout->addWidget(fullscreen);
         layout->addWidget(close);
         return controls;
-    }
-
-    QPushButton *buildThemeButton(QWidget *parent)
-    {
-        auto *button = new QPushButton(m_sidebarCollapsed ? QString() : (m_darkMode ? "Light mode" : "Dark mode"), parent);
-        button->setProperty("nav", true);
-        button->setProperty("compactNav", m_sidebarCollapsed);
-        button->setMinimumHeight(44);
-        button->setMinimumWidth(m_sidebarCollapsed ? 48 : 0);
-        button->setToolTip(m_darkMode ? "Switch to light mode" : "Switch to dark mode");
-        if (m_sidebarCollapsed) {
-            button->setText(m_darkMode ? "L" : "D");
-        }
-        connect(button, &QPushButton::clicked, this, [this] { toggleDarkMode(); });
-        return button;
     }
 
     QWidget *buildBrandLockup(QWidget *parent, const QString &subtitle)
@@ -2371,7 +2237,6 @@ private:
         layout->addWidget(m_statusLabel);
         setCentralWidget(chrome);
         applyChromeState();
-        applyTheme();
 
         if (!m_enableAnimations) {
             return;
@@ -2389,6 +2254,10 @@ private:
         });
         animation->start(QAbstractAnimation::DeleteWhenStopped);
     }
+
+    // ------------------------------------------------------------------------
+    // Authentication, permissions, and student accounts
+    // ------------------------------------------------------------------------
 
     void authenticate()
     {
@@ -2488,6 +2357,12 @@ private:
         saveAppState();
         showStatus("Password changed.");
     }
+
+    // ------------------------------------------------------------------------
+    // GUI self-test helpers
+    // ------------------------------------------------------------------------
+    // These public helpers are used only by command-line self-test modes. They
+    // keep the GUI testable without manually clicking through every dialog.
 
 public:
     void loginAsAdminForTest(const QString &username = "admin")
@@ -2807,20 +2682,6 @@ public:
             && authenticateCredentialsForTest("S7777", resetPassword) == AuthRole::Student;
     }
 
-    bool darkModeHealthyForTest()
-    {
-        const QString lightStyle = qApp->styleSheet();
-        if (!lightStyle.contains("theme=\"dark\"")) {
-            return false;
-        }
-
-        setDarkModeForTest(true);
-        const bool darkApplied = property("theme").toString() == "dark"
-            && qApp->styleSheet().contains("#0F1715");
-        setDarkModeForTest(false);
-        return darkApplied && property("theme").toString() == "light";
-    }
-
     bool scopedStudentEditingHealthyForTest()
     {
         loginAsAdminForTest("northadmin");
@@ -3020,6 +2881,7 @@ public:
     }
 
 private:
+    // Small wrappers used by the self-tests above.
     AuthRole authenticateCredentialsForTest(const QString &user, const QString &password)
     {
         if (m_role != AuthRole::None) {
@@ -3045,10 +2907,9 @@ private:
         return resetStudentPasswordForAdmin(studentId);
     }
 
-    void setDarkModeForTest(bool enabled)
-    {
-        setDarkMode(enabled, false);
-    }
+    // ------------------------------------------------------------------------
+    // Page construction
+    // ------------------------------------------------------------------------
 
     void logout()
     {
@@ -3150,7 +3011,6 @@ private:
         }
 
         layout->addStretch();
-        layout->addWidget(buildThemeButton(sidebar));
         auto *logoutButton = new QPushButton(m_sidebarCollapsed ? QString() : "Log out", sidebar);
         logoutButton->setProperty("nav", true);
         logoutButton->setProperty("compactNav", m_sidebarCollapsed);
@@ -3286,7 +3146,6 @@ private:
         passwordButton->setToolTip("Change password");
         connect(passwordButton, &QPushButton::clicked, this, [this] { openChangePasswordDialog(); });
         sideLayout->addWidget(passwordButton);
-        sideLayout->addWidget(buildThemeButton(sidebar));
         auto *logoutButton = new QPushButton(m_sidebarCollapsed ? QString() : "Log out", sidebar);
         logoutButton->setProperty("nav", true);
         logoutButton->setProperty("compactNav", m_sidebarCollapsed);
@@ -4329,6 +4188,10 @@ private:
         return pill;
     }
 
+    // ------------------------------------------------------------------------
+    // Access control and visible data
+    // ------------------------------------------------------------------------
+
     bool currentAdminHasFullAccess() const
     {
         return !m_currentAdminUsername.isEmpty() && m_adminProfiles.value(m_currentAdminUsername).fullAccess;
@@ -4420,6 +4283,10 @@ private:
         return nullptr;
     }
 
+    // ------------------------------------------------------------------------
+    // Table helpers
+    // ------------------------------------------------------------------------
+
     void setupTable(QTableWidget *table, const QStringList &headers)
     {
         table->setColumnCount(headers.size());
@@ -4449,6 +4316,10 @@ private:
         }
         header->setStretchLastSection(true);
     }
+
+    // ------------------------------------------------------------------------
+    // Student, room, restaurant, and neighborhood actions
+    // ------------------------------------------------------------------------
 
     void addStudent()
     {
@@ -4940,6 +4811,13 @@ private:
             }
         }
     }
+
+    // ------------------------------------------------------------------------
+    // Refresh methods
+    // ------------------------------------------------------------------------
+    // After a mutating action succeeds, the visible interface is rebuilt from
+    // the backend state. This keeps tables, cards, dropdowns, and dialogs in
+    // sync without duplicating update logic inside every action.
 
     void refreshAll()
     {
@@ -5597,6 +5475,10 @@ private:
         m_restoringStudentSelection = false;
     }
 
+    // ------------------------------------------------------------------------
+    // Student profile dialog helpers
+    // ------------------------------------------------------------------------
+
     bool confirmDiscardStudentProfileEdits()
     {
         if (!m_studentProfileDirty) {
@@ -5857,6 +5739,10 @@ private:
         return nullptr;
     }
 
+    // ------------------------------------------------------------------------
+    // Small display helpers
+    // ------------------------------------------------------------------------
+
     QString nextStudentId() const
     {
         int maxNumber = 1000;
@@ -6092,13 +5978,6 @@ bool runRequestedSelfTest(const QStringList &arguments, int &exitCode)
         });
         return true;
     }
-    if (arguments.contains("--dark-mode-self-test")) {
-        exitCode = runSelfTestWithTempData([](const QString &path) {
-            DormitoryWindow window(path);
-            return window.darkModeHealthyForTest();
-        });
-        return true;
-    }
     if (arguments.contains("--scoped-student-editing-self-test")) {
         exitCode = runSelfTestWithTempData([](const QString &path) {
             DormitoryWindow window(path);
@@ -6217,7 +6096,7 @@ int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
     qApp->setFont(QFont("Times New Roman", 10));
-    qApp->setStyleSheet(appStyleSheet());
+    qApp->setStyleSheet(kAppStyle);
 
     const QStringList arguments = QCoreApplication::arguments();
     int selfTestExitCode = 0;

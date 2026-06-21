@@ -1,0 +1,24 @@
+@startuml
+title Room Assignment Sequence
+
+actor Admin
+participant "Qt GUI" as GUI
+participant "University" as University
+participant "Dormitory" as Dormitory
+participant "Room" as Room
+participant "Student" as Student
+
+Admin -> GUI: choose student, dormitory, room
+GUI -> University: assignStudentToRoom(studentId, dormitoryId, roomNumber)
+University -> University: find Student and Dormitory
+University -> Dormitory: assignStudent(student, roomNumber)
+Dormitory -> Room: addStudent(studentId)
+Room -> Room: check capacity and duplicates
+Room --> Dormitory: student accepted
+Dormitory -> Student: assignToRoom(dormitoryId, roomNumber)
+Student --> Dormitory: assignment saved
+Dormitory --> University: assignment complete
+University --> GUI: success
+GUI --> Admin: show updated room and student status
+
+@enduml

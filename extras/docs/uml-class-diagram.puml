@@ -1,0 +1,106 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Person {
+  - QString id
+  - QString fullName
+  + id() QString
+  + fullName() QString
+  + setFullName(fullName)
+  + toJson() QJsonObject
+}
+
+class Student {
+  - int academicYear
+  - optional<QString> dormitoryId
+  - optional<int> roomNumber
+  + academicYear() int
+  + isAssigned() bool
+  + setAcademicYear(academicYear)
+  + assignToRoom(dormitoryId, roomNumber)
+  + clearAssignment()
+  + fromJson(object) Student
+}
+
+class Room {
+  - int number
+  - int capacity
+  - QSet<QString> studentIds
+  + occupancy() int
+  + containsStudent(studentId) bool
+  + addStudent(studentId)
+  + removeStudent(studentId)
+  + isFull() bool
+}
+
+class DailyMenu {
+  + QString breakfast
+  + QString lunch
+  + QString dinner
+  + QString breakfastImageUrl
+  + QString lunchImageUrl
+  + QString dinnerImageUrl
+}
+
+class Restaurant {
+  - QString name
+  - QMap<QDate, DailyMenu> menus
+  - QHash<QDate, int> mealsServed
+  + setMenu(date, menu)
+  + recordMealServed(date, count)
+}
+
+class Dormitory {
+  - QString id
+  - QString name
+  - int capacity
+  - QHash<int, Room> rooms
+  - Restaurant restaurant
+  + availableRooms() QVector<Room>
+  + occupiedRooms() QVector<Room>
+  + addRoom(room)
+  + removeRoom(roomNumber)
+  + assignStudent(student, roomNumber)
+  + removeStudent(student)
+}
+
+class University {
+  - QHash<QString, Student> students
+  - QHash<QString, Dormitory> dormitories
+  + addStudent(student)
+  + removeStudent(studentId)
+  + addDormitory(dormitory)
+  + removeDormitory(dormitoryId)
+  + assignStudentToRoom(studentId, dormitoryId, roomNumber)
+  + removeStudentFromRoom(studentId)
+  + setRestaurantMenu(dormitoryId, date, menu)
+  + restaurantMenuForStudent(studentId, date)
+  + validateIntegrity()
+}
+
+class JsonStorage {
+  + saveUniversity(university, filePath)
+  + loadUniversity(filePath) University
+}
+
+class DomainError
+class AppState {
+  + neighborhoodToJson(neighborhood)
+  + adminProfileToJson(profile)
+  + defaultAppStatePath() QString
+}
+
+Person <|-- Student
+Dormitory "1" *-- "1" Restaurant
+Dormitory "1" *-- "many" Room
+Restaurant "1" *-- "many" DailyMenu
+University "1" o-- "many" Student
+University "1" o-- "many" Dormitory
+JsonStorage ..> University
+AppState ..> University
+DomainError ..> University
+DomainError ..> Dormitory
+DomainError ..> Room
+DomainError ..> Restaurant
+
+@enduml

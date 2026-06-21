@@ -6,7 +6,7 @@ This audit compares Dormora against the University Dormitory & Restaurant Manage
 
 ## Final Verdict
 
-The implementation is ready for review after the release ZIPs are generated from the current workspace. UML documentation is still being finalized separately.
+The implementation is ready for review after the release ZIPs are generated from the current workspace. UML class and sequence documentation is included under `extras/docs/`.
 
 The required PDF features are covered:
 
@@ -26,15 +26,15 @@ These are the changes that would block or weaken submission if missing.
 | Item | Status | Notes |
 | --- | --- | --- |
 | Remove extra cloud/database code | Done | Project is now offline and focused on the PDF requirements. |
-| Provide UML class diagram | Pending | Final diagram will be added after review. |
-| Provide sequence diagram for a key operation | Pending | Optional diagram will be added after the class diagram is approved. |
+| Provide UML class diagram | Done | `extras/docs/uml-class-diagram.puml` and `.svg`. |
+| Provide sequence diagram for a key operation | Done | `extras/docs/uml-room-assignment-sequence.puml`. |
 | Map implementation to PDF requirements | Done | `extras/docs/assignment-compliance.md` maps features directly to the PDF. |
 | Provide interview explanation/Q&A | Done | `extras/docs/interview-preparation.md` contains oral defense answers. |
 | Verify build and tests | Done | Run `ctest --test-dir build --output-on-failure`; all tests must pass. |
 | Package source for teacher review | Done by packaging script | `extras/scripts/package-release.ps1` creates `release/Dormora-source.zip`. |
 | Package executable for direct testing | Done by packaging script | `release/Dormora-binary.zip` includes the executable and Qt runtime files. |
 
-The remaining documentation blocker is the UML package.
+No blocker remains for the coursework repository submission.
 
 ## Better If Done Later
 
@@ -68,7 +68,7 @@ These are improvements that would make the project cleaner, but they are not req
 | Restaurant management | One restaurant per dormitory, daily menus, meal count tracking. |
 | Resident menu access | `University::restaurantMenuForStudent`, student portal today's meals, and next-7-days schedule. |
 | GUI validation | `DomainError` messages shown through the GUI. |
-| UML documentation | Pending final diagram work. |
+| UML documentation | `extras/docs/uml-class-diagram.puml`, `.svg`, and `uml-room-assignment-sequence.puml`. |
 | File handling | JSON save/load and app-state persistence. |
 
 ## How To Present The Project
@@ -79,7 +79,7 @@ These are improvements that would make the project cleaner, but they are not req
 4. Run the app and login as `admin` / `admin123`.
 5. Show the Residents page: search a student and explain profile/room assignment.
 6. Show the Meals page: menus belong to dormitory restaurants.
-7. Login as `S1001` / `student123` and show the student portal, today's meals, and the next 7 days of menus.
+7. Reset a student password as `admin`, then login with that student ID and generated password to show the student portal, today's meals, and the next 7 days of menus.
 8. Mention tests: backend and GUI self-tests pass through CTest.
 
 ## Final Verification Commands
