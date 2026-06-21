@@ -1,6 +1,0 @@
-<RCC>
-    <qresource prefix="/icons">
-        <file>chevron-down.svg</file>
-        <file>dormora-logo.svg</file>
-    </qresource>
-</RCC>

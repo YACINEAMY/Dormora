@@ -1,5 +1,6 @@
 build/
-sample-university-data.json
+release/
 udrms-data.json
+*.lnk
 *.user
 *.autosave

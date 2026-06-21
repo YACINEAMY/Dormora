@@ -1,52 +1,152 @@
-# University Dormitory & Restaurant Management System
+# Dormora
 
-This is the backend foundation for the OOP project described in the assignment PDF. It is written in C++ with Qt Core only, so a Qt Widgets or QML graphical interface can be added later without changing the domain model.
+**Dormora** is a C++ / Qt desktop application for managing a university dormitory and restaurant system. It was built for an Object-Oriented Programming coursework project and focuses on clear class design, data validation, local persistence, and a usable graphical interface.
 
-## Implemented Backend
+The system lets an administrator manage students, dormitories, rooms, room assignments, restaurant menus, meal counts, and scoped admin access. Students can also sign in to view their current accommodation and dining information.
 
-- Student management with ID, full name, academic year, and accommodation status.
-- Dormitory management with multiple dormitories, capacity limits, rooms, assignment, and removal.
-- Room management with room number, capacity, occupancy tracking, and over-occupancy prevention.
-- Restaurant management as composition: every dormitory owns exactly one restaurant.
-- Daily menus for breakfast, lunch, and dinner.
-- Optional meal count tracking per date.
-- JSON save/load persistence for students, dormitories, rooms, restaurants, menus, and assignments.
-- Atomic file writes and integrity checks before saving or after loading data.
-- Domain validation through `DomainError`.
-- Backend tests covering each component plus assignment, capacity checks, resident-only restaurant access, meal counts, persistence, and invalid persisted data.
+## Project Highlights
 
-## Build
+- C++17 backend organized into separate domain classes.
+- Qt Widgets graphical interface with login, dashboards, forms, tables, dialogs, and validation messages.
+- Local JSON persistence for students, dormitories, rooms, restaurants, menus, admin accounts, and app state.
+- Admin and student login routing.
+- Dormitory neighborhoods with scoped administrator access.
+- Room capacity checks that prevent over-occupancy.
+- Daily breakfast, lunch, and dinner menu management.
+- Served-meal counter per dormitory and date.
+- Bundled meal images matched to menu names.
+- Automated backend and GUI self-tests through CTest.
 
-From this folder in PowerShell:
+## Main Features
+
+### Student Management
+
+- Add, edit, duplicate, search, and delete students.
+- Store student ID, full name, academic year, and accommodation status.
+- Assign and remove students from dormitory rooms.
+- View student profiles with room, dormitory, and access information.
+
+### Dormitory And Room Management
+
+- Manage multiple dormitories.
+- Store rooms with room numbers and capacities.
+- Track room occupancy.
+- Display available, occupied, and full rooms.
+- Enforce room capacity before assigning students.
+
+### Restaurant Management
+
+- Each dormitory has one restaurant.
+- Manage daily breakfast, lunch, and dinner menus.
+- Display menus to residents based on their assigned dormitory.
+- Track meals served per dormitory and date.
+- Use bundled meal images that match common menu items.
+
+### Administration
+
+- Global administrator account for full access.
+- Scoped administrators with access to specific campus neighborhoods.
+- Admin account creation from the GUI.
+- Access checks before changing students, rooms, menus, or neighborhoods.
+
+## Technology Stack
+
+- **Language:** C++17
+- **GUI Framework:** Qt Widgets
+- **Build System:** CMake
+- **Persistence:** JSON files using Qt JSON APIs
+- **Testing:** CTest with backend and GUI self-tests
+
+## Repository Layout
+
+```text
+backend/
+  include/udrms/     Domain class headers
+  src/               Backend implementation and console demo
+  tests/             Backend unit tests
+
+frontend/
+  src/               Qt Widgets GUI entry point
+  resources/         Icons and bundled meal images
+
+extras/
+  docs/              Supporting documentation for presentation/submission
+  examples/          Example JSON data
+  scripts/           Packaging helper scripts
+
+CMakeLists.txt       Main CMake configuration
+README.md            Project overview and setup guide
+Launch Dormora.bat   Quick launcher for the built GUI
+```
+
+## Requirements
+
+- CMake 3.21 or newer
+- Qt 6 with the Core and Widgets modules
+- A C++17 compiler compatible with Qt
+
+The project was developed and tested on Windows using Qt `6.10.2` with MinGW.
+
+## Build And Run
+
+From PowerShell:
 
 ```powershell
 $env:PATH='C:\Qt\Tools\CMake_64\bin;C:\Qt\Tools\mingw1310_64\bin;C:\Qt\6.10.2\mingw_64\bin;' + $env:PATH
 cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH=C:\Qt\6.10.2\mingw_64
 cmake --build build
-ctest --test-dir build --output-on-failure
-.\build\udrms_demo.exe
 .\build\udrms_gui.exe
 ```
 
-## Structure
+You can also launch the built app with:
 
-- `include/udrms`: public backend headers.
-- `src`: implementation and console demo entrypoint.
-- `tests`: backend test executable.
-- `docs/uml-class-diagram.puml`: UML class diagram source.
-- `udrms_gui`: basic Qt Widgets mockup executable for future GUI work.
+```powershell
+.\Launch Dormora.bat
+```
 
-## Login Credentials
+## Run Tests
 
-The GUI starts with role-detecting login. There is no role dropdown.
+```powershell
+ctest --test-dir build --output-on-failure
+```
 
-- Admin: `admin` / `admin123`
-- Student: any seeded student ID, for example `S1001` / `student123`
+Useful direct commands:
 
-Admins get the full dashboard, student management, and restaurant editor. Students get a restricted portal showing only their accommodation and menu access.
+```powershell
+.\build\udrms_tests.exe
+.\build\udrms_demo.exe
+.\build\udrms_gui.exe --smoke-test
+```
 
-## GUI Integration Later
+## Test Credentials
 
-The GUI should call `University` as the main service object. Forms can catch `DomainError` and display its message to the user. Persistence should stay behind `JsonStorage`, so GUI screens do not need to know the JSON format.
+These accounts are included for local coursework demonstration:
 
-The current GUI is intentionally a mockup. It uses seeded sample data and exercises the real backend for adding students, assigning rooms, removing assignments, and editing daily restaurant menus.
+| Role | Username / ID | Password |
+| --- | --- | --- |
+| Global admin | `admin` | `admin123` |
+| North campus admin | `northadmin` | `north123` |
+| South campus admin | `southadmin` | `south123` |
+| Student | Any seeded student ID, for example `S1001` | `student123` |
+
+## Data Storage
+
+The application stores local data in JSON format. This keeps the project simple to review, easy to run without a database server, and suitable for coursework submission.
+
+Generated local data and build output are ignored by git.
+
+## Packaging
+
+After building the app and deploying the Qt runtime files, packages can be created with:
+
+```powershell
+.\extras\scripts\package-release.ps1
+```
+
+The script prepares source and binary zip files under `release/`.
+
+## Notes
+
+- This is a coursework project, not a production system.
+- Passwords are stored only for demonstration and testing.
+- A real deployment would need password hashing, stronger authentication, and database-backed storage.

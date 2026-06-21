@@ -1,0 +1,58 @@
+{
+    "dormitories": [
+        {
+            "capacity": 4,
+            "id": "DORM-A",
+            "name": "Central Residence",
+            "restaurant": {
+                "mealsServed": [
+                    {
+                        "count": 1,
+                        "date": "2026-05-19"
+                    }
+                ],
+                "menus": [
+                    {
+                        "breakfast": "Coffee and eggs",
+                        "date": "2026-05-19",
+                        "dinner": "Soup and salad",
+                        "lunch": "Chicken and rice"
+                    }
+                ],
+                "name": "Central Restaurant"
+            },
+            "rooms": [
+                {
+                    "capacity": 2,
+                    "number": 101,
+                    "students": [
+                        "STU-001",
+                        "STU-002"
+                    ]
+                },
+                {
+                    "capacity": 2,
+                    "number": 102,
+                    "students": [
+                    ]
+                }
+            ]
+        }
+    ],
+    "students": [
+        {
+            "academicYear": 1,
+            "dormitoryId": "DORM-A",
+            "fullName": "Amina Benali",
+            "id": "STU-001",
+            "roomNumber": 101
+        },
+        {
+            "academicYear": 2,
+            "dormitoryId": "DORM-A",
+            "fullName": "Karim Haddad",
+            "id": "STU-002",
+            "roomNumber": 101
+        }
+    ]
+}
