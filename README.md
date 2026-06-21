@@ -80,6 +80,12 @@ README.md            Project overview and setup guide
 Launch Dormora.bat   Quick launcher for the built GUI
 ```
 
+The UML class diagram is available as:
+
+- `extras/docs/uml-class-diagram.pdf` for direct upload or printing.
+- `extras/docs/uml-class-diagram.drawio` for editing in Draw.io / diagrams.net.
+- `extras/docs/uml-class-diagram.svg` and `.puml` as source/export formats.
+
 ## Requirements
 
 - CMake 3.21 or newer

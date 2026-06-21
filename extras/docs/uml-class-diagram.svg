@@ -1,151 +1,128 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="980" viewBox="0 0 1400 980">
-  <defs>
-    <style>
-      .title { font: 700 28px Arial, sans-serif; fill: #13231d; }
-      .box { fill: #f7faf8; stroke: #1d7a57; stroke-width: 2; rx: 10; }
-      .header { fill: #e6f4ee; stroke: #1d7a57; stroke-width: 2; }
-      .name { font: 700 18px Arial, sans-serif; fill: #13231d; }
-      .text { font: 14px Consolas, monospace; fill: #13231d; }
-      .note { font: 13px Arial, sans-serif; fill: #475467; }
-      .line { stroke: #13231d; stroke-width: 2; fill: none; }
-      .dash { stroke: #667085; stroke-width: 2; stroke-dasharray: 7 5; fill: none; }
-      .label { font: 13px Arial, sans-serif; fill: #13231d; }
-      .diamond { fill: #13231d; stroke: #13231d; stroke-width: 1; }
-      .hollow { fill: #f7faf8; stroke: #13231d; stroke-width: 2; }
-    </style>
-    <marker id="inherit" markerWidth="14" markerHeight="14" refX="13" refY="7" orient="auto">
-      <path d="M 13 7 L 1 1 L 1 13 Z" class="hollow"/>
-    </marker>
-    <marker id="arrow" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto">
-      <path d="M 1 1 L 11 6 L 1 11" class="line"/>
-    </marker>
-  </defs>
-
-  <text x="40" y="45" class="title">Dormora UML Class Diagram</text>
-  <text x="40" y="70" class="note">University Dormitory &amp; Restaurant Management System - backend model and persistence helpers</text>
-
-  <g id="person">
-    <rect x="70" y="110" width="280" height="150" class="box"/>
-    <rect x="70" y="110" width="280" height="38" class="header"/>
-    <text x="92" y="135" class="name">Person</text>
-    <text x="92" y="170" class="text">- id: QString</text>
-    <text x="92" y="192" class="text">- fullName: QString</text>
-    <text x="92" y="220" class="text">+ setFullName()</text>
-    <text x="92" y="242" class="text">+ virtual toJson()</text>
-  </g>
-
-  <g id="student">
-    <rect x="70" y="350" width="310" height="190" class="box"/>
-    <rect x="70" y="350" width="310" height="38" class="header"/>
-    <text x="92" y="375" class="name">Student</text>
-    <text x="92" y="410" class="text">- academicYear: int</text>
-    <text x="92" y="432" class="text">- dormitoryId: optional&lt;QString&gt;</text>
-    <text x="92" y="454" class="text">- roomNumber: optional&lt;int&gt;</text>
-    <text x="92" y="482" class="text">+ isAssigned(): bool</text>
-    <text x="92" y="504" class="text">+ assignToRoom()</text>
-    <text x="92" y="526" class="text">+ clearAssignment()</text>
-  </g>
-
-  <g id="room">
-    <rect x="500" y="110" width="310" height="178" class="box"/>
-    <rect x="500" y="110" width="310" height="38" class="header"/>
-    <text x="522" y="135" class="name">Room</text>
-    <text x="522" y="170" class="text">- number: int</text>
-    <text x="522" y="192" class="text">- capacity: int</text>
-    <text x="522" y="214" class="text">- studentIds: QSet&lt;QString&gt;</text>
-    <text x="522" y="242" class="text">+ addStudent()</text>
-    <text x="522" y="264" class="text">+ isFull(): bool</text>
-  </g>
-
-  <g id="restaurant">
-    <rect x="980" y="110" width="330" height="178" class="box"/>
-    <rect x="980" y="110" width="330" height="38" class="header"/>
-    <text x="1002" y="135" class="name">Restaurant</text>
-    <text x="1002" y="170" class="text">- name: QString</text>
-    <text x="1002" y="192" class="text">- menus: QMap&lt;QDate, DailyMenu&gt;</text>
-    <text x="1002" y="214" class="text">- mealsServed: QHash&lt;QDate,int&gt;</text>
-    <text x="1002" y="242" class="text">+ setMenu()</text>
-    <text x="1002" y="264" class="text">+ recordMealServed()</text>
-  </g>
-
-  <g id="daily-menu">
-    <rect x="1010" y="380" width="300" height="160" class="box"/>
-    <rect x="1010" y="380" width="300" height="38" class="header"/>
-    <text x="1032" y="405" class="name">DailyMenu</text>
-    <text x="1032" y="440" class="text">+ breakfast: QString</text>
-    <text x="1032" y="462" class="text">+ lunch: QString</text>
-    <text x="1032" y="484" class="text">+ dinner: QString</text>
-    <text x="1032" y="506" class="text">+ image resource paths</text>
-  </g>
-
-  <g id="dormitory">
-    <rect x="500" y="380" width="340" height="220" class="box"/>
-    <rect x="500" y="380" width="340" height="38" class="header"/>
-    <text x="522" y="405" class="name">Dormitory</text>
-    <text x="522" y="440" class="text">- id: QString</text>
-    <text x="522" y="462" class="text">- name: QString</text>
-    <text x="522" y="484" class="text">- capacity: int</text>
-    <text x="522" y="506" class="text">- rooms: QHash&lt;int, Room&gt;</text>
-    <text x="522" y="528" class="text">- restaurant: Restaurant</text>
-    <text x="522" y="556" class="text">+ assignStudent()</text>
-    <text x="522" y="578" class="text">+ availableRooms()</text>
-  </g>
-
-  <g id="university">
-    <rect x="470" y="700" width="400" height="200" class="box"/>
-    <rect x="470" y="700" width="400" height="38" class="header"/>
-    <text x="492" y="725" class="name">University</text>
-    <text x="492" y="760" class="text">- students: QHash&lt;QString, Student&gt;</text>
-    <text x="492" y="782" class="text">- dormitories: QHash&lt;QString, Dormitory&gt;</text>
-    <text x="492" y="810" class="text">+ addStudent()</text>
-    <text x="492" y="832" class="text">+ assignStudentToRoom()</text>
-    <text x="492" y="854" class="text">+ restaurantMenuForStudent()</text>
-    <text x="492" y="876" class="text">+ validateIntegrity()</text>
-  </g>
-
-  <g id="json">
-    <rect x="940" y="720" width="300" height="130" class="box"/>
-    <rect x="940" y="720" width="300" height="38" class="header"/>
-    <text x="962" y="745" class="name">JsonStorage</text>
-    <text x="962" y="780" class="text">+ saveUniversity()</text>
-    <text x="962" y="802" class="text">+ loadUniversity()</text>
-    <text x="962" y="824" class="text">+ JSON persistence</text>
-  </g>
-
-  <g id="error">
-    <rect x="90" y="720" width="260" height="92" class="box"/>
-    <rect x="90" y="720" width="260" height="38" class="header"/>
-    <text x="112" y="745" class="name">DomainError</text>
-    <text x="112" y="780" class="text">business rule errors</text>
-  </g>
-
-  <!-- Relationships -->
-  <path d="M 205 350 L 205 262" class="line" marker-end="url(#inherit)"/>
-  <text x="220" y="315" class="label">inherits</text>
-
-  <path d="M 555 380 L 630 290" class="line"/>
-  <polygon points="548,388 561,371 576,384 562,401" class="diamond"/>
-  <text x="540" y="340" class="label">composes many rooms</text>
-
-  <path d="M 840 460 L 980 205" class="line"/>
-  <polygon points="832,468 845,451 860,464 846,481" class="diamond"/>
-  <text x="850" y="320" class="label">composes 1 restaurant</text>
-
-  <path d="M 1150 288 L 1155 380" class="line"/>
-  <polygon points="1149,281 1158,299 1140,300 1134,282" class="diamond"/>
-  <text x="1165" y="340" class="label">menus by date</text>
-
-  <path d="M 590 700 L 300 540" class="line"/>
-  <polygon points="597,704 577,701 586,684 606,687" class="hollow"/>
-  <text x="340" y="625" class="label">aggregates students</text>
-
-  <path d="M 670 700 L 670 600" class="line"/>
-  <polygon points="670,692 660,674 680,674" class="hollow"/>
-  <text x="690" y="655" class="label">aggregates dormitories</text>
-
-  <path d="M 940 785 L 872 795" class="dash" marker-end="url(#arrow)"/>
-  <text x="885" y="770" class="label">loads / saves</text>
-
-  <path d="M 350 765 L 470 800" class="dash" marker-end="url(#arrow)"/>
-  <text x="350" y="745" class="label">thrown on invalid rules</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1280" viewBox="0 0 1600 1280">
+<defs><style>.title{font:700 30px Arial,sans-serif;fill:#13231d}.subtitle{font:14px Arial,sans-serif;fill:#475467}.box{fill:#f7faf8;stroke:#1d7a57;stroke-width:2;rx:10}.header{fill:#e6f4ee;stroke:#1d7a57;stroke-width:2}.name{font:700 18px Arial,sans-serif;fill:#13231d}.text{font:14px Consolas,monospace;fill:#13231d}.note{font:13px Arial,sans-serif;fill:#475467}.line{stroke:#13231d;stroke-width:2.2;fill:none}.dash{stroke:#667085;stroke-width:2.2;stroke-dasharray:8 6;fill:none}.sep{stroke:#cbd8d2;stroke-width:1}</style><marker id="arrow" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto"><path d="M 1 1 L 11 6 L 1 11" class="line"/></marker><marker id="inherit" markerWidth="14" markerHeight="14" refX="13" refY="7" orient="auto"><path d="M 13 7 L 1 1 L 1 13 Z" fill="#f7faf8" stroke="#13231d" stroke-width="2"/></marker><marker id="diamond" markerWidth="16" markerHeight="12" refX="1" refY="6" orient="auto"><path d="M 1 6 L 8 1 L 15 6 L 8 11 Z" fill="#13231d" stroke="#13231d"/></marker><marker id="hollowDiamond" markerWidth="16" markerHeight="12" refX="1" refY="6" orient="auto"><path d="M 1 6 L 8 1 L 15 6 L 8 11 Z" fill="#f7faf8" stroke="#13231d" stroke-width="1.8"/></marker></defs>
+<text x="60" y="48" class="title">Dormora UML Class Diagram</text>
+<text x="60" y="76" class="subtitle">University Dormitory &amp; Restaurant Management System - class structure, composition, associations, and persistence helpers</text>
+<path d="M 270 430 L 245 325" class="line" marker-end="url(#inherit)"/>
+<text x="180" y="370" class="note">inherits</text>
+<path d="M 775 455 L 775 350" class="line" marker-start="url(#diamond)" marker-end="url(#arrow)"/>
+<text x="700" y="400" class="note">owns rooms</text>
+<path d="M 1000 610 L 1045 610 L 1045 230 L 1090 230" class="line" marker-start="url(#diamond)" marker-end="url(#arrow)"/>
+<text x="1012" y="392" class="note">owns one restaurant</text>
+<path d="M 1300 345 L 1310 455" class="line" marker-start="url(#diamond)" marker-end="url(#arrow)"/>
+<text x="1235" y="400" class="note">dated menus</text>
+<path d="M 520 1025 L 485 1025 L 485 548 L 470 547" class="line" marker-start="url(#hollowDiamond)" marker-end="url(#arrow)"/>
+<text x="335" y="770" class="note">manages students</text>
+<path d="M 785 875 L 775 765" class="line" marker-start="url(#hollowDiamond)" marker-end="url(#arrow)"/>
+<text x="700" y="825" class="note">manages dormitories</text>
+<path d="M 1170 912 L 1050 1025" class="dash" marker-end="url(#arrow)"/>
+<text x="1082" y="905" class="note">save / load</text>
+<path d="M 1170 1127 L 1090 1127 L 1090 1025 L 1050 1025" class="dash" marker-end="url(#arrow)"/>
+<text x="1050" y="1080" class="note">GUI persistence</text>
+<path d="M 400 940 L 520 1025" class="dash" marker-end="url(#arrow)"/>
+<text x="235" y="835" class="note">validation errors</text>
+<path d="M 400 940 L 475 940 L 475 610 L 550 610" class="dash" marker-end="url(#arrow)"/>
+<path d="M 400 940 L 505 940 L 505 232 L 575 232" class="dash" marker-end="url(#arrow)"/>
+<path d="M 400 940 L 1060 940 L 1060 230 L 1090 230" class="dash" marker-end="url(#arrow)"/>
+<rect x="70" y="115" width="350" height="210" class="box"/>
+<rect x="70" y="115" width="350" height="38" class="header"/>
+<text x="86" y="140" class="name">Person</text>
+<text x="86" y="177" class="text">- id: QString</text>
+<text x="86" y="199" class="text">- fullName: QString</text>
+<line x1="78" y1="213" x2="412" y2="213" class="sep"/>
+<text x="86" y="221" class="text">+ id()</text>
+<text x="86" y="243" class="text">+ fullName()</text>
+<text x="86" y="265" class="text">+ setFullName()</text>
+<text x="86" y="287" class="text">+ toJson()</text>
+<rect x="70" y="430" width="400" height="235" class="box"/>
+<rect x="70" y="430" width="400" height="38" class="header"/>
+<text x="86" y="455" class="name">Student</text>
+<text x="86" y="492" class="text">- academicYear: int</text>
+<text x="86" y="514" class="text">- dormitoryId: optional&lt;QString&gt;</text>
+<text x="86" y="536" class="text">- roomNumber: optional&lt;int&gt;</text>
+<line x1="78" y1="550" x2="462" y2="550" class="sep"/>
+<text x="86" y="558" class="text">+ isAssigned()</text>
+<text x="86" y="580" class="text">+ assignToRoom()</text>
+<text x="86" y="602" class="text">+ clearAssignment()</text>
+<text x="86" y="624" class="text">+ fromJson()</text>
+<rect x="575" y="115" width="400" height="235" class="box"/>
+<rect x="575" y="115" width="400" height="38" class="header"/>
+<text x="591" y="140" class="name">Room</text>
+<text x="591" y="177" class="text">- number: int</text>
+<text x="591" y="199" class="text">- capacity: int</text>
+<text x="591" y="221" class="text">- studentIds: QSet&lt;QString&gt;</text>
+<line x1="583" y1="235" x2="967" y2="235" class="sep"/>
+<text x="591" y="243" class="text">+ occupancy()</text>
+<text x="591" y="265" class="text">+ containsStudent()</text>
+<text x="591" y="287" class="text">+ addStudent()</text>
+<text x="591" y="309" class="text">+ removeStudent()</text>
+<text x="591" y="331" class="text">+ isFull()</text>
+<rect x="550" y="455" width="450" height="310" class="box"/>
+<rect x="550" y="455" width="450" height="38" class="header"/>
+<text x="566" y="480" class="name">Dormitory</text>
+<text x="566" y="517" class="text">- id: QString</text>
+<text x="566" y="539" class="text">- name: QString</text>
+<text x="566" y="561" class="text">- capacity: int</text>
+<text x="566" y="583" class="text">- rooms: QHash&lt;int, Room&gt;</text>
+<text x="566" y="605" class="text">- restaurant: Restaurant</text>
+<line x1="558" y1="619" x2="992" y2="619" class="sep"/>
+<text x="566" y="627" class="text">+ addRoom()</text>
+<text x="566" y="649" class="text">+ availableRooms()</text>
+<text x="566" y="671" class="text">+ occupiedRooms()</text>
+<text x="566" y="693" class="text">+ assignStudent()</text>
+<text x="566" y="715" class="text">+ removeStudent()</text>
+<rect x="520" y="875" width="530" height="300" class="box"/>
+<rect x="520" y="875" width="530" height="38" class="header"/>
+<text x="536" y="900" class="name">University</text>
+<text x="536" y="937" class="text">- students: QHash&lt;QString, Student&gt;</text>
+<text x="536" y="959" class="text">- dormitories: QHash&lt;QString, Dormitory&gt;</text>
+<line x1="528" y1="973" x2="1042" y2="973" class="sep"/>
+<text x="536" y="981" class="text">+ addStudent()</text>
+<text x="536" y="1003" class="text">+ removeStudent()</text>
+<text x="536" y="1025" class="text">+ addDormitory()</text>
+<text x="536" y="1047" class="text">+ assignStudentToRoom()</text>
+<text x="536" y="1069" class="text">+ setRestaurantMenu()</text>
+<text x="536" y="1091" class="text">+ restaurantMenuForStudent()</text>
+<text x="536" y="1113" class="text">+ validateIntegrity()</text>
+<rect x="1090" y="115" width="420" height="230" class="box"/>
+<rect x="1090" y="115" width="420" height="38" class="header"/>
+<text x="1106" y="140" class="name">Restaurant</text>
+<text x="1106" y="177" class="text">- name: QString</text>
+<text x="1106" y="199" class="text">- menus: QMap&lt;QDate, DailyMenu&gt;</text>
+<text x="1106" y="221" class="text">- mealsServed: QHash&lt;QDate, int&gt;</text>
+<line x1="1098" y1="235" x2="1502" y2="235" class="sep"/>
+<text x="1106" y="243" class="text">+ setMenu()</text>
+<text x="1106" y="265" class="text">+ menuForDate()</text>
+<text x="1106" y="287" class="text">+ recordMealServed()</text>
+<text x="1106" y="309" class="text">+ mealsServedOn()</text>
+<rect x="1110" y="455" width="400" height="230" class="box"/>
+<rect x="1110" y="455" width="400" height="38" class="header"/>
+<text x="1126" y="480" class="name">DailyMenu</text>
+<text x="1126" y="517" class="text">+ breakfast: QString</text>
+<text x="1126" y="539" class="text">+ lunch: QString</text>
+<text x="1126" y="561" class="text">+ dinner: QString</text>
+<text x="1126" y="583" class="text">+ breakfastImageUrl: QString</text>
+<text x="1126" y="605" class="text">+ lunchImageUrl: QString</text>
+<text x="1126" y="627" class="text">+ dinnerImageUrl: QString</text>
+<line x1="1118" y1="641" x2="1502" y2="641" class="sep"/>
+<text x="1126" y="649" class="text">+ toJson()</text>
+<text x="1126" y="671" class="text">+ fromJson()</text>
+<rect x="1170" y="845" width="340" height="135" class="box"/>
+<rect x="1170" y="845" width="340" height="38" class="header"/>
+<text x="1186" y="870" class="name">JsonStorage</text>
+<text x="1186" y="907" class="text">+ saveUniversity()</text>
+<text x="1186" y="929" class="text">+ loadUniversity(): University</text>
+<rect x="1170" y="1060" width="340" height="135" class="box"/>
+<rect x="1170" y="1060" width="340" height="38" class="header"/>
+<text x="1186" y="1085" class="name">AppState</text>
+<text x="1186" y="1122" class="text">+ neighborhoodToJson()</text>
+<text x="1186" y="1144" class="text">+ adminProfileToJson()</text>
+<text x="1186" y="1166" class="text">+ defaultAppStatePath()</text>
+<rect x="70" y="875" width="330" height="130" class="box"/>
+<rect x="70" y="875" width="330" height="38" class="header"/>
+<text x="86" y="900" class="name">DomainError</text>
+<text x="86" y="937" class="text">+ user-facing domain rule violation</text>
+<line x1="78" y1="951" x2="392" y2="951" class="sep"/>
+<text x="86" y="959" class="text">+ what()</text>
+<rect x="60" y="1210" width="800" height="44" rx="8" fill="#f7faf8" stroke="#cbd8d2"/>
+<text x="78" y="1238" class="note">Legend: filled diamond = composition, hollow diamond = aggregation, hollow triangle = inheritance, dashed arrow = dependency.</text>
 </svg>

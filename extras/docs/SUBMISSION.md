@@ -77,7 +77,9 @@ This recreates:
 - `extras/docs/assignment-compliance.md` - requirement checklist.
 - `extras/docs/presentation-readiness-audit.md` - final required-vs-optional change list.
 - `extras/docs/interview-preparation.md` - oral review explanations and likely Q&A.
-- `extras/docs/uml-class-diagram.puml` and `.svg` - UML class diagram.
+- `extras/docs/uml-class-diagram.pdf` - UML class diagram ready to upload.
+- `extras/docs/uml-class-diagram.drawio` - editable UML class diagram for Draw.io / diagrams.net.
+- `extras/docs/uml-class-diagram.puml` and `.svg` - UML class diagram source/export formats.
 - `extras/docs/uml-room-assignment-sequence.puml` - optional room assignment sequence diagram.
 
 ## Notes
