@@ -11,7 +11,7 @@ The binary package includes `Launch Dormora.bat`. Double-click it to start the a
 
 ## Project Summary
 
-Dormora is a C++/Qt implementation of a University Dormitory and Restaurant Management System. It manages students, dormitories, rooms, restaurant menus, room assignment, resident meal access, and local data persistence.
+Dormora is a C++/Qt implementation of a University Dormitory and Restaurant Management System. It manages students, dormitories, rooms, restaurant menus, room assignment, resident meal access, next-week student dining schedules, and local data persistence.
 
 The code is separated into:
 

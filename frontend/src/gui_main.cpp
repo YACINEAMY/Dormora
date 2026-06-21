@@ -42,6 +42,7 @@
 #include <QSaveFile>
 #include <QScreen>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QSet>
 #include <QSignalBlocker>
 #include <QSpinBox>
@@ -291,6 +292,58 @@ QFrame#studentCard {
     background: #FFFFFF;
     border: 1px solid #D9E5DF;
     border-radius: 8px;
+}
+QFrame#studentHeroCard {
+    background: #123D32;
+    border: none;
+    border-radius: 8px;
+}
+QLabel#studentHeroKicker {
+    color: #A9D8CA;
+    font-size: 12px;
+    font-weight: 800;
+}
+QLabel#studentHeroTitle {
+    color: #FFFFFF;
+    font-size: 26px;
+    font-weight: 800;
+}
+QLabel#studentHeroText {
+    color: #DCEBE6;
+    font-size: 14px;
+    font-weight: 600;
+}
+QLabel#studentHeroMetric {
+    color: #FFFFFF;
+    font-size: 30px;
+    font-weight: 800;
+}
+QFrame#studentInfoTile {
+    background: #FFFFFF;
+    border: 1px solid #D9E5DF;
+    border-top: 3px solid #1F7560;
+    border-radius: 8px;
+}
+QFrame#studentMealCard {
+    background: #FFFFFF;
+    border: 1px solid #D9E5DF;
+    border-radius: 8px;
+}
+QFrame#studentWeekMenuCard {
+    background: #FFFFFF;
+    border: 1px solid #D9E5DF;
+    border-radius: 8px;
+}
+QFrame#studentWeekMenuRow {
+    background: #F7FAF9;
+    border: 1px solid #E2ECE7;
+    border-radius: 6px;
+}
+QLabel#studentMealPhoto {
+    background: #F7FAF9;
+    border: 1px solid #D9E5DF;
+    border-radius: 7px;
+    color: #667085;
 }
 QFrame#studentInlinePanel, QFrame#todayMenuItem, QFrame#mealRow {
     background: #F7FAF9;
@@ -2184,6 +2237,16 @@ public:
 
     bool restaurantAccessRulesHealthyForTest()
     {
+        loginAsStudentForTest("S1001");
+        const bool studentPortalLayoutHealthy = findChild<QFrame *>("studentHeroCard") != nullptr
+            && findChildren<QFrame *>("studentInfoTile").size() >= 3
+            && findChildren<QFrame *>("studentMealCard").size() >= 3
+            && findChild<QFrame *>("studentWeekMenuCard") != nullptr
+            && findChildren<QFrame *>("studentWeekMenuRow").size() >= 7;
+        if (!studentPortalLayoutHealthy) {
+            return false;
+        }
+
         const QDate today = QDate::currentDate();
         const auto assignedMenu = m_university.restaurantMenuForStudent("S1001", today);
         if (!assignedMenu.has_value() || assignedMenu->breakfast.isEmpty() || assignedMenu->lunch.isEmpty() || assignedMenu->dinner.isEmpty()) {
@@ -2588,40 +2651,66 @@ private:
         auto *page = pageContainer(student.fullName(), "Resident record, current room, and today's dining access.", true);
         auto *layout = qobject_cast<QVBoxLayout *>(page->layout());
 
-        auto *cards = new QHBoxLayout();
-        cards->setSpacing(18);
-        cards->addWidget(buildStudentIdentityCard(student));
-        cards->addWidget(buildStudentRoomCard(student));
-        layout->addLayout(cards);
+        layout->addWidget(buildStudentHeroCard(student));
 
-        auto *menuCard = card(page);
-        menuCard->setObjectName("studentCard");
-        auto *menuLayout = new QVBoxLayout(menuCard);
-        menuLayout->setContentsMargins(20, 18, 20, 20);
-        menuLayout->setSpacing(10);
-        auto *menuTop = new QHBoxLayout();
-        menuTop->addWidget(classLabel("Restaurant Menu", "cardTitle"));
-        menuTop->addStretch();
+        auto *accessRow = new QHBoxLayout();
+        accessRow->setSpacing(14);
+        if (student.isAssigned()) {
+            const Dormitory &dormitory = m_university.dormitory(student.dormitoryId().value());
+            const Room &room = dormitory.room(student.roomNumber().value());
+            accessRow->addWidget(buildStudentInfoTile("Room", QString::number(room.number()), dormitory.name(), "Assigned"), 1);
+            accessRow->addWidget(buildStudentInfoTile("Occupancy", QString("%1 / %2").arg(room.occupancy()).arg(room.capacity()), "Current room residents", room.isFull() ? "Full" : "Open beds"), 1);
+            accessRow->addWidget(buildStudentInfoTile("Dining", dormitory.restaurant().name(), "Access follows your dormitory", "Available"), 1);
+        } else {
+            accessRow->addWidget(buildStudentInfoTile("Room", "Unassigned", "No accommodation assigned", "Pending"), 1);
+            accessRow->addWidget(buildStudentInfoTile("Occupancy", "-", "No room selected yet", "Pending"), 1);
+            accessRow->addWidget(buildStudentInfoTile("Dining", "Unavailable", "Restaurant access requires a room", "Locked"), 1);
+        }
+        layout->addLayout(accessRow);
+
+        auto *diningHeader = new QHBoxLayout();
+        diningHeader->setSpacing(10);
+        auto *diningCopy = new QVBoxLayout();
+        diningCopy->setSpacing(3);
+        diningCopy->addWidget(classLabel("Today's Dining", "cardTitle"));
+        diningCopy->addWidget(classLabel(student.isAssigned()
+                                             ? "Menus are attached to your residence hall."
+                                             : "Dining access appears after a room assignment.",
+                                         "muted"));
+        diningHeader->addLayout(diningCopy, 1);
+        diningHeader->addWidget(statusPill(QDate::currentDate().toString("MMM d"), "#E6F4EE", "#1D7A57"));
+        layout->addLayout(diningHeader);
+
         if (student.isAssigned()) {
             const Dormitory &dormitory = m_university.dormitory(student.dormitoryId().value());
             const auto menu = dormitory.restaurant().menuForDate(QDate::currentDate());
-            menuTop->addWidget(statusPill(QDate::currentDate().toString("MMM d"), "#E6F4EE", "#1D7A57"));
-            menuLayout->addLayout(menuTop);
-            menuLayout->addWidget(classLabel(dormitory.restaurant().name() + " - " + dormitory.name(), "muted"));
-            if (menu.has_value()) {
-                menuLayout->addWidget(mealRow("Breakfast", menu->breakfast, menu->breakfastImageUrl));
-                menuLayout->addWidget(mealRow("Lunch", menu->lunch, menu->lunchImageUrl));
-                menuLayout->addWidget(mealRow("Dinner", menu->dinner, menu->dinnerImageUrl));
-            } else {
-                menuLayout->addWidget(statusPill("No menu for today", "#FFF7E6", "#B7791F"));
-            }
-        } else {
-            menuLayout->addLayout(menuTop);
-            menuLayout->addWidget(statusPill("Restaurant access requires a room assignment", "#FFF7E6", "#B7791F"));
-        }
-        layout->addWidget(menuCard, 1);
+            layout->addWidget(classLabel(dormitory.restaurant().name() + " - " + dormitory.name(), "muted"));
 
-        rootLayout->addWidget(page, 1);
+            auto *mealGrid = new QHBoxLayout();
+            mealGrid->setSpacing(14);
+            if (menu.has_value()) {
+                mealGrid->addWidget(buildStudentMealCard("Breakfast", menu->breakfast, menu->breakfastImageUrl), 1);
+                mealGrid->addWidget(buildStudentMealCard("Lunch", menu->lunch, menu->lunchImageUrl), 1);
+                mealGrid->addWidget(buildStudentMealCard("Dinner", menu->dinner, menu->dinnerImageUrl), 1);
+            } else {
+                mealGrid->addWidget(buildStudentInfoTile("Restaurant Menu", "No menu", "No menu is set for today.", "Missing"), 1);
+            }
+            layout->addLayout(mealGrid, 1);
+            layout->addWidget(buildStudentWeekMenuCard(dormitory));
+        } else {
+            layout->addWidget(buildStudentInfoTile("Restaurant Menu", "No access", "Restaurant access requires a room assignment.", "Locked"), 1);
+        }
+
+        auto *scroll = new QScrollArea(root);
+        scroll->setObjectName("studentPortalScroll");
+        scroll->setWidgetResizable(true);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        scroll->setWidget(page);
+        QTimer::singleShot(0, scroll, [scroll] {
+            scroll->verticalScrollBar()->setValue(0);
+        });
+        rootLayout->addWidget(scroll, 1);
         setAppContent(root);
     }
 
@@ -2662,6 +2751,146 @@ private:
         connect(logoutButton, &QPushButton::clicked, this, [this] { logout(); });
         sideLayout->addWidget(logoutButton);
         return sidebar;
+    }
+
+    QWidget *buildStudentHeroCard(const Student &student)
+    {
+        auto *hero = new QFrame(this);
+        hero->setObjectName("studentHeroCard");
+        hero->setMinimumHeight(126);
+
+        auto *layout = new QHBoxLayout(hero);
+        layout->setContentsMargins(24, 18, 24, 18);
+        layout->setSpacing(20);
+
+        auto *copy = new QVBoxLayout();
+        copy->setSpacing(6);
+        copy->addWidget(label("RESIDENT DASHBOARD", "studentHeroKicker", hero));
+        copy->addWidget(label("Welcome, " + student.fullName(), "studentHeroTitle", hero));
+        copy->addWidget(label(student.id() + " - Academic year " + QString::number(student.academicYear()), "studentHeroText", hero));
+        copy->addStretch();
+        copy->addWidget(statusPill(student.isAssigned() ? "Active resident" : "Waiting for assignment",
+                                   student.isAssigned() ? "#DFF4EA" : "#FFF7E6",
+                                   student.isAssigned() ? "#116149" : "#9A6700"),
+                        0,
+                        Qt::AlignLeft);
+        layout->addLayout(copy, 1);
+
+        auto *summary = new QVBoxLayout();
+        summary->setSpacing(4);
+        summary->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+        summary->addWidget(label(QDate::currentDate().toString("dddd"), "studentHeroText", hero), 0, Qt::AlignRight);
+        summary->addWidget(label(QDate::currentDate().toString("MMM d"), "studentHeroMetric", hero), 0, Qt::AlignRight);
+        if (student.isAssigned()) {
+            const Dormitory &dormitory = m_university.dormitory(student.dormitoryId().value());
+            summary->addWidget(label("Room " + QString::number(student.roomNumber().value()) + " - " + dormitory.name(),
+                                     "studentHeroText",
+                                     hero),
+                               0,
+                               Qt::AlignRight);
+        } else {
+            summary->addWidget(label("No room assigned", "studentHeroText", hero), 0, Qt::AlignRight);
+        }
+        layout->addLayout(summary);
+
+        return hero;
+    }
+
+    QWidget *buildStudentInfoTile(const QString &labelText, const QString &value, const QString &detail, const QString &badge)
+    {
+        auto *tile = new QFrame(this);
+        tile->setObjectName("studentInfoTile");
+        tile->setMinimumHeight(104);
+
+        auto *layout = new QVBoxLayout(tile);
+        layout->setContentsMargins(16, 12, 16, 12);
+        layout->setSpacing(4);
+        layout->addWidget(classLabel(labelText.toUpper(), "metricLabel"));
+        layout->addWidget(classLabel(value, "cardTitle"));
+        layout->addWidget(classLabel(detail, "muted"));
+        layout->addStretch();
+        layout->addWidget(statusPill(badge, "#E6F4EE", "#1D7A57"), 0, Qt::AlignLeft);
+        return tile;
+    }
+
+    QWidget *buildStudentMealCard(const QString &meal, const QString &description, const QString &imageUrl)
+    {
+        auto *box = new QFrame(this);
+        box->setObjectName("studentMealCard");
+        box->setMinimumHeight(214);
+
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(12, 12, 12, 12);
+        layout->setSpacing(7);
+        const QString resolvedImageUrl = imageUrl.trimmed().isEmpty()
+            ? mealImageForDescription(description, meal.toLower())
+            : imageUrl;
+        layout->addWidget(mealThumbnail(resolvedImageUrl, QSize(168, 98), "studentMealPhoto"), 0, Qt::AlignHCenter);
+        layout->addWidget(classLabel(meal, "muted"));
+        auto *title = classLabel(description.isEmpty() ? "Not set" : description, "cardTitle");
+        title->setMinimumHeight(42);
+        layout->addWidget(title);
+        layout->addStretch();
+        return box;
+    }
+
+    QWidget *buildStudentWeekMenuCard(const Dormitory &dormitory)
+    {
+        auto *box = new QFrame(this);
+        box->setObjectName("studentWeekMenuCard");
+
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(18, 16, 18, 18);
+        layout->setSpacing(10);
+
+        auto *top = new QHBoxLayout();
+        top->setSpacing(10);
+        auto *copy = new QVBoxLayout();
+        copy->setSpacing(3);
+        copy->addWidget(classLabel("Next 7 Days", "cardTitle"));
+        copy->addWidget(classLabel("Upcoming breakfast, lunch, and dinner for your residence hall.", "muted"));
+        top->addLayout(copy, 1);
+        top->addWidget(statusPill(dormitory.id(), "#E6F4EE", "#1D7A57"));
+        layout->addLayout(top);
+
+        const QDate today = QDate::currentDate();
+        for (int offset = 1; offset <= 7; ++offset) {
+            layout->addWidget(buildStudentWeekMenuRow(dormitory, today.addDays(offset)));
+        }
+        return box;
+    }
+
+    QWidget *buildStudentWeekMenuRow(const Dormitory &dormitory, const QDate &date)
+    {
+        auto *row = new QFrame(this);
+        row->setObjectName("studentWeekMenuRow");
+
+        auto *layout = new QHBoxLayout(row);
+        layout->setContentsMargins(12, 10, 12, 10);
+        layout->setSpacing(12);
+
+        auto *dateBlock = new QVBoxLayout();
+        dateBlock->setSpacing(2);
+        dateBlock->addWidget(classLabel(date.toString("ddd"), "metricLabel"));
+        dateBlock->addWidget(classLabel(date.toString("MMM d"), "cardTitle"));
+        layout->addLayout(dateBlock);
+
+        const auto menu = dormitory.restaurant().menuForDate(date);
+        auto *meals = new QVBoxLayout();
+        meals->setSpacing(2);
+        if (menu.has_value()) {
+            meals->addWidget(classLabel("Breakfast: " + menu->breakfast, "muted"));
+            meals->addWidget(classLabel("Lunch: " + menu->lunch, "muted"));
+            meals->addWidget(classLabel("Dinner: " + menu->dinner, "muted"));
+        } else {
+            meals->addWidget(classLabel("No menu published for this date.", "muted"));
+        }
+        layout->addLayout(meals, 1);
+
+        layout->addWidget(statusPill(menu.has_value() ? "Menu set" : "Pending",
+                                     menu.has_value() ? "#E6F4EE" : "#FFF7E6",
+                                     menu.has_value() ? "#1D7A57" : "#9A6700"));
+        return row;
     }
 
     QWidget *buildStudentIdentityCard(const Student &student)
@@ -4970,11 +5199,11 @@ private:
         m_profileStatusLabel->setStyleSheet(error ? "color: #B42318;" : "color: #1D7A57;");
     }
 
-    QWidget *mealThumbnail(const QString &imageUrl)
+    QWidget *mealThumbnail(const QString &imageUrl, const QSize &thumbnailSize = QSize(72, 54), const QString &objectName = QStringLiteral("mealThumbnail"))
     {
         auto *thumbnail = new QLabel(this);
-        thumbnail->setObjectName("mealThumbnail");
-        thumbnail->setFixedSize(72, 54);
+        thumbnail->setObjectName(objectName);
+        thumbnail->setFixedSize(thumbnailSize);
         thumbnail->setAlignment(Qt::AlignCenter);
 
         const QString urlText = imageUrl.trimmed();

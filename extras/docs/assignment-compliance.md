@@ -31,7 +31,7 @@ This checklist maps the project to the requirements from the professor's Univers
 | One restaurant per dormitory | Complete | `Dormitory` contains one `Restaurant`. |
 | Manage daily breakfast, lunch, and dinner menus | Complete | `Restaurant::setMenu`, GUI meal desk. |
 | Display meal images | Complete | Bundled Qt resources under `frontend/resources/meal-*.png` and GUI meal cards. |
-| Let residents view menus | Complete | `University::restaurantMenuForStudent`, student portal. |
+| Let residents view menus | Complete | `University::restaurantMenuForStudent`, student portal today's dining cards, and next-7-days schedule. |
 | Track meals served per day | Complete | Optional requirement implemented through `recordMealServed`. |
 | Validate input and handle incorrect entries | Complete | Domain exceptions and GUI status/error messages. |
 | Save/load data across executions | Complete | `JsonStorage` and local app-state persistence. |
@@ -42,7 +42,7 @@ This checklist maps the project to the requirements from the professor's Univers
 - **OOP principles:** visible in the class design, ownership boundaries, and validation methods.
 - **Graphical interface:** Qt Widgets provides forms, buttons, tables, dialogs, and clear navigation.
 - **UML documentation:** pending final diagram review before submission.
-- **Code organization:** backend files are split by class; GUI, resources, database scripts, examples, and docs are separated.
+- **Code organization:** backend files are split by class; GUI, resources, helper scripts, examples, and docs are separated.
 - **Error handling:** invalid IDs, capacities, assignments, menus, JSON, and access attempts throw `DomainError` and are surfaced in the GUI.
 - **Performance:** ID-based `QHash` lookups and set/map containers avoid slow full-list scans for common operations.
 

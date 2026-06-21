@@ -14,7 +14,7 @@ The required PDF features are covered:
 - Qt graphical interface.
 - Student, room, dormitory, and restaurant management.
 - Room capacity checks and assignment rules.
-- Restaurant menus connected to dormitory residents.
+- Restaurant menus connected to dormitory residents, including today's meals and the next 7 days in the student portal.
 - Local JSON persistence.
 - Error handling through `DomainError` and GUI messages.
 - Automated tests through CTest.
@@ -66,7 +66,7 @@ These are improvements that would make the project cleaner, but they are not req
 | Dormitory management | Multiple dormitories, rooms, capacity, occupied/available states. |
 | Room management | Capacity and duplicate assignment checks. |
 | Restaurant management | One restaurant per dormitory, daily menus, meal count tracking. |
-| Resident menu access | `University::restaurantMenuForStudent`. |
+| Resident menu access | `University::restaurantMenuForStudent`, student portal today's meals, and next-7-days schedule. |
 | GUI validation | `DomainError` messages shown through the GUI. |
 | UML documentation | Pending final diagram work. |
 | File handling | JSON save/load and app-state persistence. |
@@ -79,7 +79,7 @@ These are improvements that would make the project cleaner, but they are not req
 4. Run the app and login as `admin` / `admin123`.
 5. Show the Residents page: search a student and explain profile/room assignment.
 6. Show the Meals page: menus belong to dormitory restaurants.
-7. Login as `S1001` / `student123` and show the student portal.
+7. Login as `S1001` / `student123` and show the student portal, today's meals, and the next 7 days of menus.
 8. Mention tests: backend and GUI self-tests pass through CTest.
 
 ## Final Verification Commands

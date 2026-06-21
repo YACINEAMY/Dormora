@@ -6,7 +6,7 @@ Dormora - University Dormitory & Restaurant Management System
 
 ## Purpose
 
-This project manages student accommodation and dormitory restaurant services. It keeps track of students, dormitories, rooms, room assignments, daily menus, meal photos, and meal access. The system was built for the Object-Oriented Programming assignment and follows the structure required in the project PDF.
+This project manages student accommodation and dormitory restaurant services. It keeps track of students, dormitories, rooms, room assignments, daily menus, meal photos, next-week dining schedules, and meal access. The system was built for the Object-Oriented Programming assignment and follows the structure required in the project PDF.
 
 ## Main Classes
 
@@ -41,7 +41,7 @@ The GUI is built with Qt Widgets. It includes:
 - Student management and search.
 - Room assignment workflows.
 - Dormitory and restaurant menu views with bundled meal photos.
-- Student portal for accommodation and meal information.
+- Student portal for accommodation, today's meal cards, and the next 7 days of menus.
 - Validation messages for invalid or incomplete actions.
 
 ## Persistence
@@ -57,6 +57,7 @@ The backend tests verify:
 - Dormitory room assignment and removal.
 - Restaurant menu validation and meal counting.
 - Restaurant access only for assigned residents.
+- Student portal dining layout for today's meals and the next-7-days schedule.
 - JSON save/load and invalid JSON handling.
 
 The Qt GUI also has smoke tests and workflow self-tests registered in CTest.

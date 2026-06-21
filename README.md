@@ -2,7 +2,7 @@
 
 **Dormora** is a C++ / Qt desktop application for managing a university dormitory and restaurant system. It was built for an Object-Oriented Programming coursework project and focuses on clear class design, data validation, local persistence, and a usable graphical interface.
 
-The system lets an administrator manage students, dormitories, rooms, room assignments, restaurant menus, meal counts, and scoped admin access. Students can also sign in to view their current accommodation and dining information.
+The system lets an administrator manage students, dormitories, rooms, room assignments, restaurant menus, meal counts, and scoped admin access. Students can also sign in to view their accommodation, today's dining cards, and the next 7 days of menus for their assigned residence hall.
 
 ## Project Highlights
 
@@ -13,6 +13,7 @@ The system lets an administrator manage students, dormitories, rooms, room assig
 - Dormitory neighborhoods with scoped administrator access.
 - Room capacity checks that prevent over-occupancy.
 - Daily breakfast, lunch, and dinner menu management.
+- Student dining dashboard with today's meals and the next 7 days of menus.
 - Served-meal counter per dormitory and date.
 - Bundled meal images matched to menu names.
 - Automated backend and GUI self-tests through CTest.
@@ -38,7 +39,7 @@ The system lets an administrator manage students, dormitories, rooms, room assig
 
 - Each dormitory has one restaurant.
 - Manage daily breakfast, lunch, and dinner menus.
-- Display menus to residents based on their assigned dormitory.
+- Display today's menu and the next 7 days of menus to residents based on their assigned dormitory.
 - Track meals served per dormitory and date.
 - Use bundled meal images that match common menu items.
 

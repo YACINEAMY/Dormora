@@ -4,13 +4,13 @@ This file is written as a study guide for an oral review or project interview. I
 
 ## Short Project Explanation
 
-Dormora is a C++ and Qt implementation of a University Dormitory and Restaurant Management System. It manages students, dormitories, rooms, room assignment, restaurant menus, meal access, and saved data. The backend is separated into OOP classes such as `Student`, `Room`, `Restaurant`, `Dormitory`, and `University`, while the frontend is a Qt Widgets desktop application.
+Dormora is a C++ and Qt implementation of a University Dormitory and Restaurant Management System. It manages students, dormitories, rooms, room assignment, restaurant menus, next-week dining schedules, meal access, and saved data. The backend is separated into OOP classes such as `Student`, `Room`, `Restaurant`, `Dormitory`, and `University`, while the frontend is a Qt Widgets desktop application.
 
 The main idea is that a university owns multiple dormitories, each dormitory owns rooms and exactly one restaurant, and students can be assigned to rooms. Restaurant access is linked to accommodation: only assigned residents can access their dormitory restaurant menu.
 
 ## One-Minute Presentation
 
-My project is called Dormora. It models a university dormitory and restaurant management system using C++ and Qt. The backend is organized around domain classes: `Student` inherits from `Person`, `Dormitory` contains rooms and one restaurant, `Room` controls occupancy, `Restaurant` stores daily menus, and `University` coordinates the whole system. The GUI lets an admin manage students, room assignments, neighborhoods, and restaurant menus, while a student account can view accommodation and meal information. Data is saved locally as JSON, so changes persist between executions. The project also includes tests for important rules such as room capacity, assignment consistency, restaurant access, and JSON persistence.
+My project is called Dormora. It models a university dormitory and restaurant management system using C++ and Qt. The backend is organized around domain classes: `Student` inherits from `Person`, `Dormitory` contains rooms and one restaurant, `Room` controls occupancy, `Restaurant` stores daily menus, and `University` coordinates the whole system. The GUI lets an admin manage students, room assignments, neighborhoods, and restaurant menus, while a student account can view accommodation, today's meals, and the next 7 days of menus. Data is saved locally as JSON, so changes persist between executions. The project also includes tests for important rules such as room capacity, assignment consistency, restaurant access, and JSON persistence.
 
 ## Important Files To Show
 
@@ -96,7 +96,7 @@ If a room is full or a student/room does not exist, a `DomainError` is thrown an
 
 ## Restaurant Access Flow
 
-Restaurant access is tied to room assignment. `University::restaurantMenuForStudent` first checks whether the student is assigned to a dormitory. If not, it throws an error. If assigned, it returns the menu from that student's dormitory restaurant.
+Restaurant access is tied to room assignment. `University::restaurantMenuForStudent` first checks whether the student is assigned to a dormitory. If not, it throws an error. If assigned, it returns the menu from that student's dormitory restaurant. The student portal uses this same rule for today's meals, then reads the assigned dormitory restaurant for the next 7 days of published menus.
 
 This reflects the PDF requirement that the restaurant is part of the dormitory and serves resident students.
 
@@ -230,4 +230,4 @@ Sorted output makes the GUI predictable, JSON files stable, and tests reliable.
 3. Show the Residents page and search for a student.
 4. Open a student profile and explain room assignment.
 5. Show the Meals page and explain that menus belong to dormitory restaurants.
-6. Login as student `S1001` / `student123` and show resident-only menu access.
+6. Login as student `S1001` / `student123` and show resident-only menu access, including today's meal cards and the next 7 days of menus.
