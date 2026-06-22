@@ -14,7 +14,9 @@
 #include <QClipboard>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDateEdit>
+#include <QDateTime>
 #include <QDialog>
 #include <QDir>
 #include <QElapsedTimer>
@@ -81,6 +83,7 @@ namespace {
 constexpr const char *kDemoStudentId = "S0001";
 constexpr const char *kDemoStudentName = "Yacine Ahmed Messaoud";
 constexpr const char *kDemoStudentPassword = "yacine123";
+constexpr const char *kPasswordHashPrefix = "sha256$";
 
 const char *kAppStyle = R"(
 * {
@@ -969,6 +972,37 @@ QIcon passwordEyeIcon(bool passwordVisible)
     return QIcon(pixmap);
 }
 
+QString passwordHashRecord(const QString &plainPassword)
+{
+    const QString salt = QString::number(QRandomGenerator::global()->generate64(), 16)
+        + QString::number(QRandomGenerator::global()->generate64(), 16);
+    const QByteArray digest = QCryptographicHash::hash((salt + "\n" + plainPassword).toUtf8(), QCryptographicHash::Sha256).toHex();
+    return QString::fromLatin1(kPasswordHashPrefix) + salt + "$" + QString::fromLatin1(digest);
+}
+
+bool isPasswordHashRecord(const QString &record)
+{
+    return record.startsWith(QString::fromLatin1(kPasswordHashPrefix)) && record.count('$') == 2;
+}
+
+bool passwordMatchesRecord(const QString &record, const QString &plainPassword)
+{
+    if (!isPasswordHashRecord(record)) {
+        return record == plainPassword;
+    }
+    const QStringList parts = record.split('$');
+    if (parts.size() != 3) {
+        return false;
+    }
+    const QByteArray digest = QCryptographicHash::hash((parts[1] + "\n" + plainPassword).toUtf8(), QCryptographicHash::Sha256).toHex();
+    return parts[2] == QString::fromLatin1(digest);
+}
+
+QString protectedPasswordRecord(const QString &passwordOrRecord)
+{
+    return isPasswordHashRecord(passwordOrRecord) ? passwordOrRecord : passwordHashRecord(passwordOrRecord);
+}
+
 } // namespace
 
 // ============================================================================
@@ -1135,6 +1169,7 @@ private:
 
     // Restaurant and neighborhood administration controls.
     QVBoxLayout *m_todayMenuSummary = nullptr;
+    QVBoxLayout *m_auditLogList = nullptr;
     QTableWidget *m_neighborhoodTable = nullptr;
     QLineEdit *m_neighborhoodSearchInput = nullptr;
     QComboBox *m_neighborhoodDormitoryFilterInput = nullptr;
@@ -1219,6 +1254,16 @@ private:
         const char *dinner;
     };
 
+    struct AuditEvent {
+        QDateTime timestamp;
+        QString actor;
+        QString action;
+        QString entity;
+        QString details;
+    };
+
+    QVector<AuditEvent> m_auditEvents;
+
     // ------------------------------------------------------------------------
     // Data setup and persistence
     // ------------------------------------------------------------------------
@@ -1245,6 +1290,7 @@ private:
         m_neighborhoods.clear();
         m_adminProfiles.clear();
         m_studentCredentials.clear();
+        m_auditEvents.clear();
 
         Dormitory north("D1", "North Residence Hall", 100, Restaurant("North Dining Hall"));
         for (int roomNumber = 101; roomNumber <= 150; ++roomNumber) {
@@ -1281,11 +1327,12 @@ private:
         m_neighborhoods.append({"EAST", "East Campus", {"D3"}});
         m_neighborhoods.append({"WEST", "West Campus", {"D4"}});
 
-        m_adminProfiles.insert("admin", {"admin", "admin123", "Residence Operations Director", true, {}});
-        m_adminProfiles.insert("northadmin", {"northadmin", "north123", "North Campus Manager", false, {"NORTH"}});
-        m_adminProfiles.insert("southadmin", {"southadmin", "south123", "South Campus Manager", false, {"SOUTH"}});
-        m_adminProfiles.insert("eastadmin", {"eastadmin", "east123", "East Campus Manager", false, {"EAST"}});
-        m_adminProfiles.insert("westadmin", {"westadmin", "west123", "West Campus Manager", false, {"WEST"}});
+        m_adminProfiles.insert("admin", {"admin", protectedPasswordRecord("admin123"), "Residence Operations Director", true, {}, "operator"});
+        m_adminProfiles.insert("northadmin", {"northadmin", protectedPasswordRecord("north123"), "North Campus Manager", false, {"NORTH"}, "operator"});
+        m_adminProfiles.insert("southadmin", {"southadmin", protectedPasswordRecord("south123"), "South Campus Manager", false, {"SOUTH"}, "operator"});
+        m_adminProfiles.insert("eastadmin", {"eastadmin", protectedPasswordRecord("east123"), "East Campus Manager", false, {"EAST"}, "operator"});
+        m_adminProfiles.insert("westadmin", {"westadmin", protectedPasswordRecord("west123"), "West Campus Manager", false, {"WEST"}, "operator"});
+        m_adminProfiles.insert("kitchenstaff", {"kitchenstaff", protectedPasswordRecord("kitchen123"), "Dining Services Staff", false, {"NORTH", "SOUTH", "EAST", "WEST"}, "restaurant"});
         ensureStudentCredentials();
     }
 
@@ -1332,9 +1379,13 @@ private:
         changed = ensureNeighborhood("EAST", "East Campus", {"D3"}) || changed;
         changed = ensureNeighborhood("WEST", "West Campus", {"D4"}) || changed;
 
-        const auto ensureAdmin = [&](const QString &username, const QString &password, const QString &displayName, bool fullAccess, const QSet<QString> &neighborhoodIds) {
+        const auto ensureAdmin = [&](const QString &username, const QString &password, const QString &displayName, bool fullAccess, const QSet<QString> &neighborhoodIds, const QString &role = QStringLiteral("operator")) {
             if (!m_adminProfiles.contains(username)) {
-                m_adminProfiles.insert(username, {username, password, displayName, fullAccess, neighborhoodIds});
+                m_adminProfiles.insert(username, {username, protectedPasswordRecord(password), displayName, fullAccess, neighborhoodIds, role});
+                return true;
+            }
+            if (!isPasswordHashRecord(m_adminProfiles[username].password)) {
+                m_adminProfiles[username].password = protectedPasswordRecord(m_adminProfiles[username].password);
                 return true;
             }
             return false;
@@ -1342,6 +1393,7 @@ private:
 
         changed = ensureAdmin("eastadmin", "east123", "East Campus Manager", false, {"EAST"}) || changed;
         changed = ensureAdmin("westadmin", "west123", "West Campus Manager", false, {"WEST"}) || changed;
+        changed = ensureAdmin("kitchenstaff", "kitchen123", "Dining Services Staff", false, {"NORTH", "SOUTH", "EAST", "WEST"}, "restaurant") || changed;
         if (mealsRecordedOn(QDate::currentDate()) == 0) {
             // Seed a visible count for dashboard/demo screens only once per
             // day, then preserve later operator changes.
@@ -1395,7 +1447,7 @@ private:
     {
         const QString key = studentId.trimmed().toUpper();
         const QString password = generateStudentPassword();
-        m_studentCredentials.insert(key, password);
+        m_studentCredentials.insert(key, protectedPasswordRecord(password));
         return password;
     }
 
@@ -1407,7 +1459,9 @@ private:
         }
         m_university.addStudent(Student(key, fullName.trimmed(), academicYear));
         invalidateVisibilityCache();
-        return createStudentCredential(key);
+        const QString password = createStudentCredential(key);
+        recordAudit("student.created", key, fullName.trimmed());
+        return password;
     }
 
     bool ensureStudentCredentials()
@@ -1418,6 +1472,9 @@ private:
         for (const Student &student : m_university.students()) {
             if (!m_studentCredentials.contains(student.id())) {
                 createStudentCredential(student.id());
+                changed = true;
+            } else if (!isPasswordHashRecord(m_studentCredentials.value(student.id()))) {
+                m_studentCredentials[student.id()] = protectedPasswordRecord(m_studentCredentials.value(student.id()));
                 changed = true;
             }
         }
@@ -1446,10 +1503,11 @@ private:
         // This one account is intentionally stable so the project can be
         // demonstrated without resetting a random temporary password first.
         const QString demoPassword = QString::fromLatin1(kDemoStudentPassword);
-        if (m_studentCredentials.value(demoStudentId) == demoPassword) {
+        if (passwordMatchesRecord(m_studentCredentials.value(demoStudentId), demoPassword)
+            && isPasswordHashRecord(m_studentCredentials.value(demoStudentId))) {
             return false;
         }
-        m_studentCredentials.insert(demoStudentId, demoPassword);
+        m_studentCredentials.insert(demoStudentId, protectedPasswordRecord(demoPassword));
         return true;
     }
 
@@ -1487,6 +1545,63 @@ private:
             credentials.insert(studentId, it.value().toString());
         }
         return credentials;
+    }
+
+    void protectLoadedAdminCredentials()
+    {
+        for (auto it = m_adminProfiles.begin(); it != m_adminProfiles.end(); ++it) {
+            if (it->role.trimmed().isEmpty()) {
+                it->role = QStringLiteral("operator");
+            }
+            if (!isPasswordHashRecord(it->password)) {
+                it->password = protectedPasswordRecord(it->password);
+            }
+        }
+    }
+
+    QJsonArray auditLogToJson() const
+    {
+        QJsonArray events;
+        for (const AuditEvent &event : m_auditEvents) {
+            events.append(QJsonObject{
+                {"timestamp", event.timestamp.toUTC().toString(Qt::ISODateWithMs)},
+                {"actor", event.actor},
+                {"action", event.action},
+                {"entity", event.entity},
+                {"details", event.details},
+            });
+        }
+        return events;
+    }
+
+    QVector<AuditEvent> auditLogFromJson(const QJsonObject &root) const
+    {
+        QVector<AuditEvent> events;
+        const QJsonValue value = root.value("auditLog");
+        if (value.isUndefined()) {
+            return events;
+        }
+        if (!value.isArray()) {
+            throw DomainError("App state field 'auditLog' must be an array.");
+        }
+
+        for (const QJsonValue &entryValue : value.toArray()) {
+            if (!entryValue.isObject()) {
+                throw DomainError("Audit log entries must be objects.");
+            }
+            const QJsonObject entry = entryValue.toObject();
+            AuditEvent event;
+            event.timestamp = QDateTime::fromString(entry.value("timestamp").toString(), Qt::ISODateWithMs);
+            event.actor = entry.value("actor").toString();
+            event.action = entry.value("action").toString();
+            event.entity = entry.value("entity").toString();
+            event.details = entry.value("details").toString();
+            if (!event.timestamp.isValid() || event.actor.isEmpty() || event.action.isEmpty()) {
+                throw DomainError("Audit log entries must include a timestamp, actor, and action.");
+            }
+            events.append(event);
+        }
+        return events;
     }
 
     bool addExampleMenus(bool preserveExisting)
@@ -1862,6 +1977,7 @@ private:
             {"neighborhoods", neighborhoods},
             {"adminProfiles", adminProfiles},
             {"studentCredentials", studentCredentialsToJson()},
+            {"auditLog", auditLogToJson()},
         };
     }
 
@@ -1922,7 +2038,9 @@ private:
         m_university = loadedUniversity;
         m_neighborhoods = loadedNeighborhoods;
         m_adminProfiles = loadedProfiles;
+        protectLoadedAdminCredentials();
         m_studentCredentials = studentCredentialsFromJson(root, loadedUniversity);
+        m_auditEvents = auditLogFromJson(root);
         ensureStudentCredentials();
     }
 
@@ -2353,7 +2471,7 @@ private:
         const QString adminKey = user.toLower();
         // Login auto-detects role: known admin usernames open the operations
         // workspace, while student IDs open the resident portal.
-        if (m_adminProfiles.contains(adminKey) && m_adminProfiles.value(adminKey).password == password) {
+        if (m_adminProfiles.contains(adminKey) && passwordMatchesRecord(m_adminProfiles.value(adminKey).password, password)) {
             m_role = AuthRole::Admin;
             m_currentAdminUsername = adminKey;
             m_currentStudentId.clear();
@@ -2367,7 +2485,7 @@ private:
         const QString studentId = user.toUpper();
         // Student logins use per-student generated credentials so a newly
         // created record immediately has its own portal account.
-        if (m_university.hasStudent(studentId) && m_studentCredentials.value(studentId) == password) {
+        if (m_university.hasStudent(studentId) && passwordMatchesRecord(m_studentCredentials.value(studentId), password)) {
             m_role = AuthRole::Student;
             m_currentStudentId = studentId;
             m_currentAdminUsername.clear();
@@ -2429,6 +2547,9 @@ private:
 
     void requireCanEditStudent(const Student &student) const
     {
+        if (currentAdminIsRestaurantStaff()) {
+            throw DomainError("Restaurant staff can manage dining records, but cannot edit student records.");
+        }
         if (currentAdminHasFullAccess()) {
             return;
         }
@@ -2448,6 +2569,7 @@ private:
             throw DomainError("Select a valid student before resetting a password.");
         }
         const QString password = createStudentCredential(key);
+        recordAudit("password.reset", key, "Head operator generated a new one-time password.");
         saveAppState();
         displayGeneratedStudentPassword(key, password);
         return password;
@@ -2458,13 +2580,14 @@ private:
         if (m_role != AuthRole::Student || m_currentStudentId.isEmpty()) {
             throw DomainError("Only signed-in students can change their password.");
         }
-        if (m_studentCredentials.value(m_currentStudentId) != currentPassword) {
+        if (!passwordMatchesRecord(m_studentCredentials.value(m_currentStudentId), currentPassword)) {
             throw DomainError("Current password is incorrect.");
         }
         if (newPassword.trimmed().size() < 8) {
             throw DomainError("New password must contain at least 8 characters.");
         }
-        m_studentCredentials[m_currentStudentId] = newPassword;
+        m_studentCredentials[m_currentStudentId] = protectedPasswordRecord(newPassword);
+        recordAudit("password.changed", m_currentStudentId, "Student changed their own password.");
         saveAppState();
         showStatus("Password changed.");
     }
@@ -2588,7 +2711,7 @@ public:
             && m_copyNeighborhoodInput->count() >= 2
             && m_adminAccessInput->count() >= 3
             && m_neighborhoodAccessInput->count() >= 2
-            && m_newAdminScopeInput->count() == 2
+            && m_newAdminScopeInput->count() == 3
             && m_newAdminNeighborhoodInput->count() >= 2;
     }
 
@@ -2600,7 +2723,11 @@ public:
 
         const QJsonObject credentials = appStateToJson().value("studentCredentials").toObject();
         const QString seededStudentPassword = credentials.value("S1001").toString();
-        if (seededStudentPassword.isEmpty() || seededStudentPassword == "student123") {
+        const QString demoStudentId = QString::fromLatin1(kDemoStudentId);
+        const QString demoPassword = QString::fromLatin1(kDemoStudentPassword);
+        if (seededStudentPassword.isEmpty()
+            || !isPasswordHashRecord(seededStudentPassword)
+            || passwordMatchesRecord(seededStudentPassword, "student123")) {
             return false;
         }
 
@@ -2618,8 +2745,8 @@ public:
             return false;
         }
 
-        if (authenticateCredentialsForTest("s1001", seededStudentPassword) != AuthRole::Student
-            || m_currentStudentId != "S1001"
+        if (authenticateCredentialsForTest(demoStudentId.toLower(), demoPassword) != AuthRole::Student
+            || m_currentStudentId != demoStudentId
             || !m_currentAdminUsername.isEmpty()) {
             return false;
         }
@@ -2798,7 +2925,8 @@ public:
         const QString demoPassword = QString::fromLatin1(kDemoStudentPassword);
         if (!m_university.hasStudent(demoStudentId)
             || m_university.student(demoStudentId).fullName() != QString::fromLatin1(kDemoStudentName)
-            || startingCredentials.value(demoStudentId).toString() != demoPassword) {
+            || !isPasswordHashRecord(startingCredentials.value(demoStudentId).toString())
+            || !passwordMatchesRecord(startingCredentials.value(demoStudentId).toString(), demoPassword)) {
             return false;
         }
         if (authenticateCredentialsForTest(demoStudentId, demoPassword) != AuthRole::Student
@@ -2832,16 +2960,19 @@ public:
         const QString createdPassword = appStateToJson()
             .value("studentCredentials").toObject()
             .value("S7777").toString();
-        if (createdPassword.isEmpty() || createdPassword != generatedOnCreate || createdPassword == "student123") {
+        if (createdPassword.isEmpty()
+            || !isPasswordHashRecord(createdPassword)
+            || createdPassword == generatedOnCreate
+            || passwordMatchesRecord(createdPassword, "student123")) {
             return false;
         }
-        if (authenticateCredentialsForTest("S7777", createdPassword) != AuthRole::Student) {
+        if (authenticateCredentialsForTest("S7777", generatedOnCreate) != AuthRole::Student) {
             return false;
         }
 
         const QString changedPassword = "student-private-7788";
-        changeCurrentStudentPasswordForTest(createdPassword, changedPassword);
-        if (authenticateCredentialsForTest("S7777", createdPassword) != AuthRole::None
+        changeCurrentStudentPasswordForTest(generatedOnCreate, changedPassword);
+        if (authenticateCredentialsForTest("S7777", generatedOnCreate) != AuthRole::None
             || authenticateCredentialsForTest("S7777", changedPassword) != AuthRole::Student) {
             return false;
         }
@@ -2908,6 +3039,42 @@ public:
             m_studentProfileDialog->close();
         }
         return inDistrictEditable;
+    }
+
+    bool portfolioSecurityAndRolesHealthyForTest()
+    {
+        if (!storedCredentialsProtectedForTest()) {
+            return false;
+        }
+
+        loginAsAdminForTest("admin");
+        const int auditBefore = m_auditEvents.size();
+        const QString generatedPassword = addStudentRecord("S8801", "Audit Trail Student", 2);
+        m_selectedStudentId = "S8801";
+        recordAudit("student.created", "S8801", "Created Audit Trail Student");
+        saveAppState();
+        if (generatedPassword.isEmpty()
+            || m_auditEvents.size() <= auditBefore
+            || !auditContainsForTest("student.created", "S8801")) {
+            return false;
+        }
+
+        if (!authenticateAdminForTest("kitchenstaff", "kitchen123")
+            || !currentAdminIsRestaurantStaff()
+            || m_stack == nullptr
+            || m_stack->currentIndex() != 2) {
+            return false;
+        }
+
+        setCurrentAdminPage(1);
+        const bool residentsBlocked = m_stack != nullptr && m_stack->currentIndex() == 2;
+        setCurrentAdminPage(3);
+        const bool neighborhoodsBlocked = m_stack != nullptr && m_stack->currentIndex() == 2;
+        showPageForTest(2);
+        refreshAll();
+        const bool canUseMealsPage = m_menuDormitoryInput != nullptr && m_menuDormitoryInput->isEnabled();
+
+        return residentsBlocked && neighborhoodsBlocked && canUseMealsPage;
     }
 
     bool uiHardeningHealthyForTest()
@@ -3117,6 +3284,40 @@ private:
         return resetStudentPasswordForAdmin(studentId);
     }
 
+    bool authenticateAdminForTest(const QString &username, const QString &password)
+    {
+        return authenticateCredentialsForTest(username, password) == AuthRole::Admin
+            && m_currentAdminUsername == username.toLower();
+    }
+
+    bool storedCredentialsProtectedForTest()
+    {
+        const QJsonObject root = appStateToJson();
+        bool adminHash = false;
+        bool staffRole = false;
+        for (const QJsonValue &value : root.value("adminProfiles").toArray()) {
+            const QJsonObject admin = value.toObject();
+            const QString username = admin.value("username").toString();
+            const QString password = admin.value("password").toString();
+            if (username == "admin") {
+                adminHash = isPasswordHashRecord(password)
+                    && passwordMatchesRecord(password, "admin123");
+            }
+            if (username == "kitchenstaff") {
+                staffRole = admin.value("role").toString() == "restaurant"
+                    && isPasswordHashRecord(password)
+                    && passwordMatchesRecord(password, "kitchen123");
+            }
+        }
+
+        const QJsonObject credentials = root.value("studentCredentials").toObject();
+        const QString demoCredential = credentials.value(QString::fromLatin1(kDemoStudentId)).toString();
+        return adminHash
+            && staffRole
+            && isPasswordHashRecord(demoCredential)
+            && passwordMatchesRecord(demoCredential, QString::fromLatin1(kDemoStudentPassword));
+    }
+
     void deleteSelectedStudentForTest(const QString &studentId)
     {
         m_selectedStudentId = studentId;
@@ -3193,6 +3394,9 @@ private:
         if (m_stack == nullptr || index < 0 || index >= m_stack->count()) {
             return;
         }
+        if (!adminPageAllowed(index)) {
+            index = 2;
+        }
         m_stack->setCurrentIndex(index);
         for (int i = 0; i < m_navButtons.size(); ++i) {
             if (m_navButtons[i] != nullptr) {
@@ -3228,6 +3432,9 @@ private:
         rootLayout->addWidget(m_stack, 1);
 
         setAppContent(root);
+        if (currentAdminIsRestaurantStaff()) {
+            setCurrentAdminPage(2);
+        }
     }
 
     QWidget *buildSidebar()
@@ -3265,15 +3472,16 @@ private:
             button->setMinimumHeight(44);
             button->setMinimumWidth(m_sidebarCollapsed ? 48 : 0);
             if (m_sidebarCollapsed) {
-                button->setIcon(adminNavIcon(i));
-                button->setIconSize(QSize(26, 26));
+            button->setIcon(adminNavIcon(i));
+            button->setIconSize(QSize(26, 26));
             }
             button->setToolTip(items[i]);
+            button->setEnabled(adminPageAllowed(i));
             group->addButton(button, i);
             m_navButtons.append(button);
             layout->addWidget(button);
             connect(button, &QPushButton::clicked, this, [this, i] { setCurrentAdminPage(i); });
-            if (i == 0) {
+            if (i == (currentAdminIsRestaurantStaff() ? 2 : 0)) {
                 button->setChecked(true);
             }
         }
@@ -3295,7 +3503,10 @@ private:
             auto *hint = label("Operations Console\nCampus records", "brandSub", sidebar);
             if (!m_currentAdminUsername.isEmpty()) {
                 const AdminProfile profile = m_adminProfiles.value(m_currentAdminUsername);
-                hint->setText(profile.displayName + "\n" + (profile.fullAccess ? "Full access" : "Neighborhood access"));
+                const QString accessText = profile.role == "restaurant"
+                    ? QStringLiteral("Restaurant staff")
+                    : (profile.fullAccess ? QStringLiteral("Full access") : QStringLiteral("Neighborhood access"));
+                hint->setText(profile.displayName + "\n" + accessText);
             }
             layout->addWidget(hint);
         }
@@ -3685,6 +3896,7 @@ private:
         main->addWidget(buildRoomMatrixCard(), 3);
         main->addWidget(buildTodayMenuSummaryCard(), 2);
         layout->addLayout(main, 1);
+        layout->addWidget(buildAuditLogCard());
 
         return page;
     }
@@ -3880,6 +4092,7 @@ private:
         m_newAdminPasswordInput->setEchoMode(QLineEdit::Password);
         m_newAdminScopeInput = createDropdown(box);
         m_newAdminScopeInput->addItem("Neighborhood scoped", "scoped");
+        m_newAdminScopeInput->addItem("Restaurant staff", "restaurant");
         m_newAdminScopeInput->addItem("Full access", "full");
         m_newAdminNeighborhoodInput = createDropdown(box);
         m_newAdminStatusLabel = classLabel("", "muted");
@@ -4038,6 +4251,25 @@ private:
         layout->addLayout(m_todayMenuSummary);
         layout->addWidget(classLabel("Resident access enforced", "muted"), 0, Qt::AlignLeft);
         layout->addStretch();
+        return box;
+    }
+
+    QWidget *buildAuditLogCard()
+    {
+        auto *box = card(this);
+        auto *layout = new QVBoxLayout(box);
+        layout->setContentsMargins(20, 16, 20, 18);
+        layout->setSpacing(10);
+
+        auto *top = new QHBoxLayout();
+        top->addWidget(classLabel("Recent Activity", "cardTitle"));
+        top->addStretch();
+        top->addWidget(classLabel("Audit trail", "muted"));
+        layout->addLayout(top);
+
+        m_auditLogList = new QVBoxLayout();
+        m_auditLogList->setSpacing(6);
+        layout->addLayout(m_auditLogList);
         return box;
     }
 
@@ -4466,7 +4698,20 @@ private:
 
     bool currentAdminHasFullAccess() const
     {
-        return !m_currentAdminUsername.isEmpty() && m_adminProfiles.value(m_currentAdminUsername).fullAccess;
+        return !m_currentAdminUsername.isEmpty()
+            && m_adminProfiles.value(m_currentAdminUsername).role != "restaurant"
+            && m_adminProfiles.value(m_currentAdminUsername).fullAccess;
+    }
+
+    bool currentAdminIsRestaurantStaff() const
+    {
+        return !m_currentAdminUsername.isEmpty()
+            && m_adminProfiles.value(m_currentAdminUsername).role == "restaurant";
+    }
+
+    bool adminPageAllowed(int index) const
+    {
+        return !currentAdminIsRestaurantStaff() || index == 2;
     }
 
     bool currentAdminCanAccessNeighborhood(const QString &neighborhoodId) const
@@ -4697,6 +4942,7 @@ private:
             student.setFullName(m_profileNameInput->text().trimmed());
             student.setAcademicYear(m_profileYearInput->value());
             m_studentProfileDirty = false;
+            recordAudit("student.updated", student.id(), student.fullName());
             setStudentPanelMessage("Student profile updated.");
         });
     }
@@ -4718,6 +4964,7 @@ private:
             const QString generatedPassword = createStudentCredential(newId);
             m_selectedStudentId = newId;
             m_studentSearchInput->setText(newId);
+            recordAudit("student.duplicated", newId, student.id());
             setStudentPanelMessage("Student duplicated as " + newId + ".");
             displayGeneratedStudentPassword(newId, generatedPassword);
         });
@@ -4750,10 +4997,12 @@ private:
     void deleteSelectedStudentRecord()
     {
         const QString removedId = m_selectedStudentId;
+        const QString removedName = m_university.student(removedId).fullName();
         requireCanEditStudent(m_university.student(removedId));
         m_university.removeStudent(removedId);
         m_studentCredentials.remove(removedId);
         m_selectedStudentId.clear();
+        recordAudit("student.deleted", removedId, removedName);
         if (m_studentSearchInput != nullptr && m_studentSearchInput->text().trimmed().compare(removedId, Qt::CaseInsensitive) == 0) {
             m_studentSearchInput->clear();
         }
@@ -4784,6 +5033,7 @@ private:
                 throw DomainError("This admin cannot assign students in that dormitory.");
             }
             m_university.assignStudentToRoom(student.id(), dormitoryId, m_profileAssignRoomInput->value());
+            recordAudit("room.assigned", student.id(), dormitoryId + " / Room " + QString::number(m_profileAssignRoomInput->value()));
             setStudentPanelMessage("Student assigned to room.");
         });
     }
@@ -4796,7 +5046,9 @@ private:
             if (student.isAssigned() && !currentAdminCanAccessDormitory(student.dormitoryId().value())) {
                 throw DomainError("This admin cannot remove assignments in that dormitory.");
             }
+            const QString previousAssignment = assignmentText(student);
             m_university.removeStudentFromRoom(student.id());
+            recordAudit("room.removed", student.id(), previousAssignment);
             setStudentPanelMessage("Student removed from room.");
         });
     }
@@ -4813,6 +5065,8 @@ private:
                 m_assignStudentInput->currentData().toString(),
                 m_assignDormitoryInput->currentData().toString(),
                 m_assignRoomInput->value());
+            recordAudit("room.assigned", targetStudent.id(), m_assignDormitoryInput->currentData().toString()
+                + " / Room " + QString::number(m_assignRoomInput->value()));
             showStatus("Student assigned to room.");
         });
     }
@@ -4825,7 +5079,9 @@ private:
             if (targetStudent.isAssigned() && !currentAdminCanAccessDormitory(targetStudent.dormitoryId().value())) {
                 throw DomainError("This admin cannot remove assignments in that dormitory.");
             }
+            const QString previousAssignment = assignmentText(targetStudent);
             m_university.removeStudentFromRoom(m_assignStudentInput->currentData().toString());
+            recordAudit("room.removed", targetStudent.id(), previousAssignment);
             showStatus("Student removed from room.");
         });
     }
@@ -4856,6 +5112,7 @@ private:
                     imageOrDefault(m_lunchImageUrlInput, lunchText, QStringLiteral("lunch")),
                     imageOrDefault(m_dinnerImageUrlInput, dinnerText, QStringLiteral("dinner")),
                 });
+            recordAudit("menu.saved", m_menuDormitoryInput->currentData().toString(), m_menuDateInput->date().toString(Qt::ISODate));
             showStatus("Menu saved.");
         });
     }
@@ -4874,6 +5131,8 @@ private:
             m_university.dormitory(dormitoryId).restaurant().recordMealServed(
                 m_mealCounterDateInput->date(),
                 m_mealCounterAmountInput->value());
+            recordAudit("meals.recorded", dormitoryId, QString::number(m_mealCounterAmountInput->value())
+                + " on " + m_mealCounterDateInput->date().toString(Qt::ISODate));
             refreshMealCounter();
             showStatus("Meal service count updated.");
         });
@@ -5004,7 +5263,9 @@ private:
             const QString username = m_newAdminUsernameInput->text().trimmed().toLower();
             const QString displayName = m_newAdminDisplayNameInput->text().trimmed();
             const QString password = m_newAdminPasswordInput->text();
-            const bool fullAccess = m_newAdminScopeInput->currentData().toString() == "full";
+            const QString accessType = m_newAdminScopeInput->currentData().toString();
+            const bool restaurantStaff = accessType == "restaurant";
+            const bool fullAccess = accessType == "full";
             const QString neighborhoodId = m_newAdminNeighborhoodInput->currentData().toString();
 
             if (username.isEmpty() || displayName.isEmpty() || password.trimmed().isEmpty()) {
@@ -5017,18 +5278,26 @@ private:
                 throw DomainError("Admin username already exists.");
             }
             if (!fullAccess && findNeighborhood(neighborhoodId) == nullptr) {
-                throw DomainError("Choose a starting neighborhood for scoped admins.");
+                throw DomainError("Choose a starting neighborhood for scoped admins or restaurant staff.");
             }
 
             QSet<QString> neighborhoodIds;
             if (!fullAccess) {
                 neighborhoodIds.insert(neighborhoodId);
             }
-            m_adminProfiles.insert(username, {username, password, displayName, fullAccess, neighborhoodIds});
+            m_adminProfiles.insert(username, {
+                username,
+                protectedPasswordRecord(password),
+                displayName,
+                fullAccess && !restaurantStaff,
+                neighborhoodIds,
+                restaurantStaff ? QStringLiteral("restaurant") : QStringLiteral("operator"),
+            });
             m_newAdminUsernameInput->clear();
             m_newAdminDisplayNameInput->clear();
             m_newAdminPasswordInput->clear();
             m_newAdminStatusLabel->setText("Created " + displayName + ".");
+            recordAudit("admin.created", username, displayName);
             showStatus("Admin account created.");
         });
     }
@@ -5046,6 +5315,7 @@ private:
                 throw DomainError("Global administrators already have access to every neighborhood.");
             }
             m_adminProfiles[username].neighborhoodIds.insert(neighborhoodId);
+            recordAudit("admin.access.granted", username, neighborhoodId);
             showStatus("Neighborhood access granted.");
         });
     }
@@ -5063,6 +5333,7 @@ private:
                 throw DomainError("Global administrator access cannot be scoped.");
             }
             m_adminProfiles[username].neighborhoodIds.remove(neighborhoodId);
+            recordAudit("admin.access.revoked", username, neighborhoodId);
             showStatus("Neighborhood access revoked.");
         });
     }
@@ -5103,6 +5374,43 @@ private:
         }
     }
 
+    QString currentActorLabel() const
+    {
+        if (m_role == AuthRole::Admin && !m_currentAdminUsername.isEmpty()) {
+            return m_adminProfiles.value(m_currentAdminUsername).displayName;
+        }
+        if (m_role == AuthRole::Student && !m_currentStudentId.isEmpty()) {
+            return m_currentStudentId;
+        }
+        return QStringLiteral("system");
+    }
+
+    void recordAudit(const QString &action, const QString &entity, const QString &details)
+    {
+        // The audit log is intentionally append-only inside a session, then
+        // trimmed before save so the JSON file stays small for portfolio demos.
+        m_auditEvents.prepend({
+            QDateTime::currentDateTimeUtc(),
+            currentActorLabel(),
+            action,
+            entity,
+            details,
+        });
+        while (m_auditEvents.size() > 200) {
+            m_auditEvents.removeLast();
+        }
+    }
+
+    bool auditContainsForTest(const QString &action, const QString &entity) const
+    {
+        for (const AuditEvent &event : m_auditEvents) {
+            if (event.action == action && event.entity == entity) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ------------------------------------------------------------------------
     // Refresh methods
     // ------------------------------------------------------------------------
@@ -5121,6 +5429,32 @@ private:
         refreshMealCounter();
         refreshMenuCards();
         refreshNeighborhoods();
+        refreshAuditLog();
+    }
+
+    void refreshAuditLog()
+    {
+        clearLayout(m_auditLogList);
+        if (m_auditLogList == nullptr) {
+            return;
+        }
+
+        if (m_auditEvents.isEmpty()) {
+            m_auditLogList->addWidget(classLabel("No activity recorded yet.", "muted"));
+            return;
+        }
+
+        const int eventCount = std::min(6, static_cast<int>(m_auditEvents.size()));
+        for (int i = 0; i < eventCount; ++i) {
+            const AuditEvent &event = m_auditEvents.at(i);
+            const QString when = event.timestamp.toLocalTime().toString("MMM d, HH:mm");
+            auto *entry = classLabel(
+                when + " | " + event.actor + " | " + event.action + " | " + event.entity
+                    + (event.details.isEmpty() ? QString() : " | " + event.details),
+                "muted");
+            entry->setWordWrap(true);
+            m_auditLogList->addWidget(entry);
+        }
     }
 
     void refreshNeighborhoods()
@@ -6199,6 +6533,9 @@ private:
 
     static void clearLayout(QLayout *layout)
     {
+        if (layout == nullptr) {
+            return;
+        }
         while (QLayoutItem *item = layout->takeAt(0)) {
             if (QWidget *widget = item->widget()) {
                 widget->deleteLater();
@@ -6339,6 +6676,13 @@ bool runRequestedSelfTest(const QStringList &arguments, int &exitCode)
         exitCode = runSelfTestWithTempData([](const QString &path) {
             DormitoryWindow window(path);
             return window.listFiltersAndMealImagesHealthyForTest();
+        });
+        return true;
+    }
+    if (arguments.contains("--portfolio-security-roles-self-test")) {
+        exitCode = runSelfTestWithTempData([](const QString &path) {
+            DormitoryWindow window(path);
+            return window.portfolioSecurityAndRolesHealthyForTest();
         });
         return true;
     }

@@ -93,6 +93,7 @@ QJsonObject adminProfileToJson(const AdminProfile &profile)
         {"username", profile.username},
         {"password", profile.password},
         {"displayName", profile.displayName},
+        {"role", profile.role.isEmpty() ? QStringLiteral("operator") : profile.role},
         {"fullAccess", profile.fullAccess},
         {"neighborhoodIds", stringSetToJson(profile.neighborhoodIds)},
     };
@@ -101,12 +102,17 @@ QJsonObject adminProfileToJson(const AdminProfile &profile)
 AdminProfile adminProfileFromJson(const QJsonObject &object)
 {
     const QVector<QString> neighborhoodIds = stringArrayFromJson(object, "neighborhoodIds");
+    const QJsonValue roleValue = object.value("role");
+    const QString role = roleValue.isUndefined()
+        ? QStringLiteral("operator")
+        : requiredAppString(object, "role");
     return {
         requiredAppString(object, "username"),
         requiredAppString(object, "password"),
         requiredAppString(object, "displayName"),
         requiredAppBool(object, "fullAccess"),
         QSet<QString>(neighborhoodIds.cbegin(), neighborhoodIds.cend()),
+        role,
     };
 }
 

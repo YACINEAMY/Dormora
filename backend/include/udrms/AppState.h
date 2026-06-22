@@ -16,14 +16,16 @@ struct Neighborhood {
     QVector<QString> dormitoryIds;
 };
 
-// Demo/admin login profile stored in the local app-state file. Passwords are
-// plain text because this is a coursework demo, not production authentication.
+// Demo/admin login profile stored in the local app-state file. Portfolio builds
+// store password hashes in this field and keep older plain-text values readable
+// through the GUI migration layer.
 struct AdminProfile {
     QString username;
     QString password;
     QString displayName;
     bool fullAccess = false;
     QSet<QString> neighborhoodIds;
+    QString role = "operator";
 };
 
 // Small JSON helpers shared by the GUI app-state loader/saver. They keep
