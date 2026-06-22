@@ -11,6 +11,7 @@
 
 #include <QApplication>
 #include <QButtonGroup>
+#include <QClipboard>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QDateEdit>
@@ -35,6 +36,7 @@
 #include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QParallelAnimationGroup>
 #include <QAbstractAnimation>
 #include <QEasingCurve>
@@ -66,6 +68,7 @@
 #include <exception>
 #include <functional>
 #include <initializer_list>
+#include <stdexcept>
 
 using namespace udrms;
 
@@ -74,6 +77,10 @@ namespace {
 // ============================================================================
 // Application styling and small helper widgets
 // ============================================================================
+
+constexpr const char *kDemoStudentId = "S0001";
+constexpr const char *kDemoStudentName = "Yacine Ahmed Messaoud";
+constexpr const char *kDemoStudentPassword = "yacine123";
 
 const char *kAppStyle = R"(
 * {
@@ -931,6 +938,37 @@ QIcon logoutNavIcon()
     return sidebarLineIcon("logout");
 }
 
+QIcon passwordEyeIcon(bool passwordVisible)
+{
+    QPixmap pixmap(28, 28);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QPen pen(QColor("#52635C"), 2.1);
+    pen.setCapStyle(Qt::RoundCap);
+    pen.setJoinStyle(Qt::RoundJoin);
+    painter.setPen(pen);
+    painter.setBrush(Qt::NoBrush);
+
+    if (passwordVisible) {
+        QPainterPath eye;
+        eye.moveTo(4, 14);
+        eye.cubicTo(8, 7, 20, 7, 24, 14);
+        eye.cubicTo(20, 21, 8, 21, 4, 14);
+        painter.drawPath(eye);
+        painter.setBrush(QColor("#1D7A57"));
+        painter.drawEllipse(QPointF(14, 14), 3.2, 3.2);
+    } else {
+        painter.drawArc(QRectF(5, 9, 18, 11), 200 * 16, 140 * 16);
+        painter.drawLine(QPointF(7, 18), QPointF(5, 21));
+        painter.drawLine(QPointF(14, 20), QPointF(14, 23));
+        painter.drawLine(QPointF(21, 18), QPointF(23, 21));
+    }
+
+    return QIcon(pixmap);
+}
+
 } // namespace
 
 // ============================================================================
@@ -1051,6 +1089,8 @@ private:
     QWidget *m_contentRoot = nullptr;
     QLineEdit *m_loginUserInput = nullptr;
     QLineEdit *m_loginPasswordInput = nullptr;
+    QAction *m_loginPasswordVisibilityAction = nullptr;
+    bool m_loginPasswordVisible = false;
     QLabel *m_loginFeedback = nullptr;
     QLabel *m_statusLabel = nullptr;
     QWidget *m_sidebarWidget = nullptr;
@@ -1366,6 +1406,7 @@ private:
             throw DomainError("Student ID and full name are required.");
         }
         m_university.addStudent(Student(key, fullName.trimmed(), academicYear));
+        invalidateVisibilityCache();
         return createStudentCredential(key);
     }
 
@@ -1389,7 +1430,27 @@ private:
                 ++it;
             }
         }
+
+        if (ensureDemoStudentCredential()) {
+            changed = true;
+        }
         return changed;
+    }
+
+    bool ensureDemoStudentCredential()
+    {
+        const QString demoStudentId = QString::fromLatin1(kDemoStudentId);
+        if (!m_university.hasStudent(demoStudentId)) {
+            return false;
+        }
+        // This one account is intentionally stable so the project can be
+        // demonstrated without resetting a random temporary password first.
+        const QString demoPassword = QString::fromLatin1(kDemoStudentPassword);
+        if (m_studentCredentials.value(demoStudentId) == demoPassword) {
+            return false;
+        }
+        m_studentCredentials.insert(demoStudentId, demoPassword);
+        return true;
     }
 
     QJsonObject studentCredentialsToJson() const
@@ -1568,6 +1629,7 @@ private:
     static QVector<ExampleStudentSeed> exampleStudentSeeds()
     {
         QVector<ExampleStudentSeed> seeds = {
+            {QString::fromLatin1(kDemoStudentId), QString::fromLatin1(kDemoStudentName), 3, "D1", 150},
             {"S1001", "Amina Benali", 1, "D1", 101},
             {"S1002", "Karim Haddad", 2, "D1", 101},
             {"S1003", "Lina Saadi", 3, "D1", 102},
@@ -2081,6 +2143,8 @@ private:
     {
         m_sidebarWidget = nullptr;
         m_stack = nullptr;
+        m_loginPasswordVisibilityAction = nullptr;
+        m_loginPasswordVisible = false;
 
         auto *root = new QWidget(this);
         root->setObjectName("loginRoot");
@@ -2137,6 +2201,11 @@ private:
         m_loginPasswordInput->setPlaceholderText("Password");
         m_loginPasswordInput->setEchoMode(QLineEdit::Password);
         m_loginPasswordInput->setMinimumHeight(44);
+        m_loginPasswordVisibilityAction = m_loginPasswordInput->addAction(passwordEyeIcon(false), QLineEdit::TrailingPosition);
+        connect(m_loginPasswordVisibilityAction, &QAction::triggered, this, [this] {
+            toggleLoginPasswordVisibility();
+        });
+        updateLoginPasswordVisibilityAction();
         loginLayout->addWidget(fieldLabel("Username / Student ID", m_loginUserInput));
         loginLayout->addSpacing(2);
         loginLayout->addWidget(fieldLabel("Password", m_loginPasswordInput));
@@ -2160,6 +2229,23 @@ private:
 
         setAppContent(root, true);
         showStatus("");
+    }
+
+    void toggleLoginPasswordVisibility()
+    {
+        m_loginPasswordVisible = !m_loginPasswordVisible;
+        updateLoginPasswordVisibilityAction();
+    }
+
+    void updateLoginPasswordVisibilityAction()
+    {
+        if (m_loginPasswordInput == nullptr || m_loginPasswordVisibilityAction == nullptr) {
+            return;
+        }
+
+        m_loginPasswordInput->setEchoMode(m_loginPasswordVisible ? QLineEdit::Normal : QLineEdit::Password);
+        m_loginPasswordVisibilityAction->setIcon(passwordEyeIcon(m_loginPasswordVisible));
+        m_loginPasswordVisibilityAction->setToolTip(m_loginPasswordVisible ? "Hide password" : "Show password");
     }
 
     // ------------------------------------------------------------------------
@@ -2307,13 +2393,38 @@ private:
 
     void displayGeneratedStudentPassword(const QString &studentId, const QString &password)
     {
-        const QString message = "Student account created for " + studentId
-            + ".\nTemporary password:\n\n" + password
+        const QString message = "Student account password for " + studentId
+            + ":\n\n" + password
             + "\n\nShow this to the student now. It will not be displayed again.";
         showStatus("Generated a one-time password for " + studentId + ".");
         if (!isAutomationMode()) {
-            showInformationMessage(this, "One-time student password", message);
+            showGeneratedPasswordDialog(message, password);
         }
+    }
+
+    QPushButton *addPasswordCopyButton(QMessageBox &box, const QString &password) const
+    {
+        auto *copyButton = box.addButton("Copy password", QMessageBox::ActionRole);
+        // The generated value is only shown once, so copying it immediately
+        // avoids transcription mistakes during account creation or reset.
+        connect(copyButton, &QPushButton::clicked, &box, [password] {
+            if (QClipboard *clipboard = QApplication::clipboard()) {
+                clipboard->setText(password);
+            }
+        });
+        return copyButton;
+    }
+
+    void showGeneratedPasswordDialog(const QString &message, const QString &password)
+    {
+        QMessageBox box(QMessageBox::Information,
+                        "One-time student password",
+                        message,
+                        QMessageBox::Ok,
+                        this);
+        addPasswordCopyButton(box, password);
+        prepareMessageBox(box);
+        execPreparedMessageBox(box);
     }
 
     void requireCanEditStudent(const Student &student) const
@@ -2483,6 +2594,10 @@ public:
 
     bool credentialRoutingHealthyForTest()
     {
+        if (!loginPasswordVisibilityToggleHealthyForTest()) {
+            return false;
+        }
+
         const QJsonObject credentials = appStateToJson().value("studentCredentials").toObject();
         const QString seededStudentPassword = credentials.value("S1001").toString();
         if (seededStudentPassword.isEmpty() || seededStudentPassword == "student123") {
@@ -2515,18 +2630,41 @@ public:
 
     bool adminPermissionBoundariesHealthyForTest()
     {
+        const auto expectedVisibleResidentCount = [this] {
+            QSet<QString> visibleDormitoryIds;
+            for (const Dormitory &dormitory : visibleDormitories()) {
+                visibleDormitoryIds.insert(dormitory.id());
+            }
+
+            int count = 0;
+            for (const Student &student : visibleStudents()) {
+                if (student.isAssigned() && visibleDormitoryIds.contains(student.dormitoryId().value())) {
+                    ++count;
+                }
+            }
+            return count;
+        };
+
         loginAsAdminForTest("admin");
+        showPageForTest(0);
+        refreshAll();
         if (!currentAdminHasFullAccess()
             || !currentAdminCanAccessDormitory("D1")
             || !currentAdminCanAccessDormitory("D2")
-            || visibleDormitories().size() < 2) {
+            || visibleDormitories().size() < 2
+            || m_residentsMetric == nullptr
+            || m_residentsMetric->text().toInt() != expectedVisibleResidentCount()) {
             return false;
         }
 
         loginAsAdminForTest("northadmin");
+        showPageForTest(0);
+        refreshAll();
         if (currentAdminHasFullAccess()
             || !currentAdminCanAccessDormitory("D1")
-            || currentAdminCanAccessDormitory("D2")) {
+            || currentAdminCanAccessDormitory("D2")
+            || m_residentsMetric == nullptr
+            || m_residentsMetric->text().toInt() != expectedVisibleResidentCount()) {
             return false;
         }
 
@@ -2655,6 +2793,39 @@ public:
         showPageForTest(1);
         refreshAll();
 
+        const QJsonObject startingCredentials = appStateToJson().value("studentCredentials").toObject();
+        const QString demoStudentId = QString::fromLatin1(kDemoStudentId);
+        const QString demoPassword = QString::fromLatin1(kDemoStudentPassword);
+        if (!m_university.hasStudent(demoStudentId)
+            || m_university.student(demoStudentId).fullName() != QString::fromLatin1(kDemoStudentName)
+            || startingCredentials.value(demoStudentId).toString() != demoPassword) {
+            return false;
+        }
+        if (authenticateCredentialsForTest(demoStudentId, demoPassword) != AuthRole::Student
+            || authenticateCredentialsForTest(demoStudentId, "student123") != AuthRole::None
+            || !generatedPasswordCopyButtonHealthyForTest()) {
+            return false;
+        }
+        loginAsAdminForTest("admin");
+        showPageForTest(1);
+
+        selectComboData(m_studentFilterInput, QStringLiteral("assigned"));
+        selectComboData(m_studentDormitoryFilterInput, QStringLiteral("D1"));
+        const QString createdThroughFormPassword = addStudentRecord("S7776", "Visible New Student", 2);
+        m_selectedStudentId = "S7776";
+        saveAppState();
+        focusStudentInList("S7776");
+        refreshAll();
+
+        if (createdThroughFormPassword.isEmpty()
+            || !studentRowVisibleForTest("S7776")
+            || authenticateCredentialsForTest("S7776", createdThroughFormPassword) != AuthRole::Student) {
+            return false;
+        }
+
+        loginAsAdminForTest("admin");
+        showPageForTest(1);
+
         const QString generatedOnCreate = addStudentRecord("S7777", "Generated Password Student", 2);
         saveAppState();
 
@@ -2677,9 +2848,28 @@ public:
 
         loginAsAdminForTest("admin");
         const QString resetPassword = resetStudentPasswordForAdminForTest("S7777");
-        return !resetPassword.isEmpty()
-            && resetPassword != changedPassword
-            && authenticateCredentialsForTest("S7777", resetPassword) == AuthRole::Student;
+        if (resetPassword.isEmpty()
+            || resetPassword == changedPassword
+            || authenticateCredentialsForTest("S7777", resetPassword) != AuthRole::Student) {
+            return false;
+        }
+
+        loginAsAdminForTest("admin");
+        showPageForTest(1);
+        m_selectedStudentId = "S7777";
+        openSelectedStudentProfile();
+        m_profileNameInput->setText("Updated Student Name");
+        m_profileYearInput->setValue(4);
+        saveSelectedStudent();
+        if (m_university.student("S7777").fullName() != "Updated Student Name"
+            || m_university.student("S7777").academicYear() != 4) {
+            return false;
+        }
+
+        deleteSelectedStudentForTest("S7777");
+        return !m_university.hasStudent("S7777")
+            && !appStateToJson().value("studentCredentials").toObject().contains("S7777")
+            && authenticateCredentialsForTest("S7777", resetPassword) == AuthRole::None;
     }
 
     bool scopedStudentEditingHealthyForTest()
@@ -2725,6 +2915,8 @@ public:
         loginAsAdminForTest("admin");
         showPageForTest(2);
         refreshAll();
+
+        const bool unexpectedErrorsHandled = unexpectedActionErrorsHandledForTest();
 
         const bool mealCounterHealthy = m_mealCounterValueLabel != nullptr
             && m_mealCounterValueLabel->property("class").toString() == "counterValue"
@@ -2775,6 +2967,7 @@ public:
         }
 
         return mealCounterHealthy
+            && unexpectedErrorsHandled
             && menuSummaryHealthy
             && maximizedHealthy
             && dialogStyleHealthy
@@ -2782,6 +2975,23 @@ public:
             && sidebarTogglePreservesContent
             && compactNavHealthy
             && compactLogoutHealthy;
+    }
+
+    bool unexpectedActionErrorsHandledForTest()
+    {
+        runAction([] {
+            throw std::runtime_error("simulated unexpected action failure");
+        });
+        const bool standardExceptionHandled = m_statusLabel != nullptr
+            && m_statusLabel->text().contains("simulated unexpected action failure");
+
+        runAction([] {
+            throw 42;
+        });
+        const bool unknownExceptionHandled = m_statusLabel != nullptr
+            && m_statusLabel->text().contains("Unexpected error");
+
+        return standardExceptionHandled && unknownExceptionHandled;
     }
 
     bool listFiltersAndMealImagesHealthyForTest()
@@ -2905,6 +3115,64 @@ private:
     QString resetStudentPasswordForAdminForTest(const QString &studentId)
     {
         return resetStudentPasswordForAdmin(studentId);
+    }
+
+    void deleteSelectedStudentForTest(const QString &studentId)
+    {
+        m_selectedStudentId = studentId;
+        deleteSelectedStudentRecord();
+        invalidateVisibilityCache();
+        saveAppState();
+        refreshAll();
+    }
+
+    bool studentRowVisibleForTest(const QString &studentId) const
+    {
+        if (m_studentTable == nullptr) {
+            return false;
+        }
+        for (int row = 0; row < m_studentTable->rowCount(); ++row) {
+            if (m_studentTable->item(row, 0)->text() == studentId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool loginPasswordVisibilityToggleHealthyForTest()
+    {
+        if (m_role != AuthRole::None) {
+            logout();
+        }
+        if (m_loginPasswordInput == nullptr || m_loginPasswordVisibilityAction == nullptr) {
+            return false;
+        }
+
+        const bool startsHidden = m_loginPasswordInput->echoMode() == QLineEdit::Password
+            && m_loginPasswordVisibilityAction->toolTip().contains("Show");
+        m_loginPasswordVisibilityAction->trigger();
+        const bool togglesVisible = m_loginPasswordInput->echoMode() == QLineEdit::Normal
+            && m_loginPasswordVisibilityAction->toolTip().contains("Hide");
+        m_loginPasswordVisibilityAction->trigger();
+        const bool togglesHidden = m_loginPasswordInput->echoMode() == QLineEdit::Password
+            && m_loginPasswordVisibilityAction->toolTip().contains("Show");
+        return startsHidden && togglesVisible && togglesHidden;
+    }
+
+    bool generatedPasswordCopyButtonHealthyForTest() const
+    {
+        QMessageBox box(QMessageBox::Information,
+                        "One-time student password",
+                        "Copy button test",
+                        QMessageBox::Ok);
+        const QString password = "copy-check-123";
+        QPushButton *copyButton = addPasswordCopyButton(box, password);
+        if (copyButton == nullptr || copyButton->text() != "Copy password" || QApplication::clipboard() == nullptr) {
+            return false;
+        }
+        QApplication::clipboard()->clear();
+        copyButton->click();
+        return QApplication::clipboard()->text() == password;
     }
 
     // ------------------------------------------------------------------------
@@ -3210,6 +3478,10 @@ private:
                 dialog.accept();
             } catch (const DomainError &error) {
                 status->setText(error.what());
+            } catch (const std::exception &error) {
+                status->setText("Unexpected error: " + QString::fromLocal8Bit(error.what()));
+            } catch (...) {
+                status->setText("Unexpected error: The password could not be changed safely.");
             }
         });
 
@@ -4332,7 +4604,7 @@ private:
                 m_studentNameInput->text().trimmed(),
                 m_academicYearInput->value());
             m_selectedStudentId = newStudentId;
-            m_studentSearchInput->setText(newStudentId);
+            focusStudentInList(newStudentId);
             m_studentIdInput->clear();
             m_studentNameInput->clear();
             setStudentPanelMessage("Student added.");
@@ -4397,15 +4669,17 @@ private:
                 const QString generatedPassword = addStudentRecord(newStudentId, fullName, yearInput->value());
                 m_selectedStudentId = newStudentId;
                 saveAppState();
+                focusStudentInList(newStudentId);
                 refreshAll();
-                if (m_studentSearchInput != nullptr) {
-                    m_studentSearchInput->setText(newStudentId);
-                }
                 selectStudentRow(newStudentId);
                 dialog.accept();
                 displayGeneratedStudentPassword(newStudentId, generatedPassword);
             } catch (const DomainError &error) {
                 status->setText(error.what());
+            } catch (const std::exception &error) {
+                status->setText("Unexpected error: " + QString::fromLocal8Bit(error.what()));
+            } catch (...) {
+                status->setText("Unexpected error: The student could not be created safely.");
             }
         });
 
@@ -4468,16 +4742,21 @@ private:
         }
 
         runAction([this] {
-            const QString removedId = m_selectedStudentId;
-            requireCanEditStudent(m_university.student(removedId));
-            m_university.removeStudent(removedId);
-            m_studentCredentials.remove(removedId);
-            m_selectedStudentId.clear();
-            if (m_studentSearchInput != nullptr && m_studentSearchInput->text().trimmed().compare(removedId, Qt::CaseInsensitive) == 0) {
-                m_studentSearchInput->clear();
-            }
+            deleteSelectedStudentRecord();
             setStudentPanelMessage("Student deleted.");
         });
+    }
+
+    void deleteSelectedStudentRecord()
+    {
+        const QString removedId = m_selectedStudentId;
+        requireCanEditStudent(m_university.student(removedId));
+        m_university.removeStudent(removedId);
+        m_studentCredentials.remove(removedId);
+        m_selectedStudentId.clear();
+        if (m_studentSearchInput != nullptr && m_studentSearchInput->text().trimmed().compare(removedId, Qt::CaseInsensitive) == 0) {
+            m_studentSearchInput->clear();
+        }
     }
 
     void resetSelectedStudentPassword()
@@ -4809,6 +5088,18 @@ private:
             if (!isAutomationMode()) {
                 showWarningMessage(this, "Rule feedback", error.what());
             }
+        } catch (const std::exception &error) {
+            const QString message = "Unexpected error: " + QString::fromLocal8Bit(error.what());
+            setStudentPanelMessage(message, true);
+            if (!isAutomationMode()) {
+                showWarningMessage(this, "Unexpected error", message);
+            }
+        } catch (...) {
+            const QString message = "Unexpected error: The operation could not be completed safely.";
+            setStudentPanelMessage(message, true);
+            if (!isAutomationMode()) {
+                showWarningMessage(this, "Unexpected error", message);
+            }
         }
     }
 
@@ -4999,20 +5290,29 @@ private:
 
     void refreshMetrics()
     {
-        int totalStudents = 0;
+        int residentCount = 0;
         int openBeds = 0;
         int mealsToday = 0;
         const QDate today = QDate::currentDate();
 
-        totalStudents = visibleStudents().size();
+        QSet<QString> visibleDormitoryIds;
         for (const Dormitory &dormitory : visibleDormitories()) {
+            visibleDormitoryIds.insert(dormitory.id());
             for (const Room &room : dormitory.rooms()) {
                 openBeds += room.capacity() - room.occupancy();
             }
             mealsToday += dormitory.restaurant().mealsServedOn(today);
         }
 
-        m_residentsMetric->setText(QString::number(totalStudents));
+        // The dashboard metrics are scoped to the dormitories this admin can
+        // manage. Student search can still list everyone as read-only context.
+        for (const Student &student : visibleStudents()) {
+            if (student.isAssigned() && visibleDormitoryIds.contains(student.dormitoryId().value())) {
+                ++residentCount;
+            }
+        }
+
+        m_residentsMetric->setText(QString::number(residentCount));
         m_availableRoomsMetric->setText(QString::number(openBeds));
         m_mealsMetric->setText(QString::number(mealsToday));
     }
@@ -5461,6 +5761,35 @@ private:
                 return;
             }
         }
+    }
+
+    void focusStudentInList(const QString &studentId)
+    {
+        if (studentId.isEmpty()) {
+            return;
+        }
+
+        // A new student starts unassigned, so old filters such as "assigned
+        // only" or a dormitory-specific filter would otherwise hide the row.
+        if (m_studentFilterInput != nullptr) {
+            QSignalBlocker blocker(m_studentFilterInput);
+            selectComboData(m_studentFilterInput, QStringLiteral("all"));
+        }
+        if (m_studentYearFilterInput != nullptr) {
+            QSignalBlocker blocker(m_studentYearFilterInput);
+            selectComboData(m_studentYearFilterInput, 0);
+        }
+        if (m_studentDormitoryFilterInput != nullptr) {
+            QSignalBlocker blocker(m_studentDormitoryFilterInput);
+            selectComboData(m_studentDormitoryFilterInput, QStringLiteral("all"));
+        }
+        if (m_studentSearchInput != nullptr) {
+            QSignalBlocker blocker(m_studentSearchInput);
+            m_studentSearchInput->setText(studentId);
+        }
+
+        refreshStudents();
+        selectStudentRow(studentId);
     }
 
     void restoreStudentSelection()
@@ -6137,6 +6466,10 @@ int main(int argc, char *argv[])
     } catch (const std::exception &error) {
         closeStartupLoadingScreen(startupLoading);
         showWarningMessage(nullptr, "Unexpected startup error", error.what());
+        return 1;
+    } catch (...) {
+        closeStartupLoadingScreen(startupLoading);
+        showWarningMessage(nullptr, "Unexpected startup error", "The application could not start because of an unknown error.");
         return 1;
     }
 }

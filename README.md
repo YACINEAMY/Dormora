@@ -194,9 +194,8 @@ These accounts are included for local coursework demonstration:
 | Global admin       | `admin`                             | `admin123`           |
 | North campus admin | `northadmin`                        | `north123`           |
 | South campus admin | `southadmin`                        | `south123`           |
+| Demo student       | `S0001`                             | `yacine123`          |
 | Student            | Any student ID, for example `S1001` | Generated in the GUI |
-
----
 
 ## Data Storage
 
@@ -204,7 +203,7 @@ Dormora stores local data in JSON format. This makes the project simple to revie
 
 Generated local data and build output are ignored by Git.
 
-Student passwords are generated when a student account is created. The global administrator can also reset a student’s password from the student profile dialog. The new temporary password is shown once and can then be used for student login.
+Student passwords are generated when a student account is created. The global administrator can also reset a student's password from the student profile dialog. The new temporary password is shown once, with a **Copy password** button for convenience, and can then be used for student login. `S0001` is kept as a stable demo student account for quick presentations.
 
 ---
 

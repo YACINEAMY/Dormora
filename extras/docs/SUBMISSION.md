@@ -27,9 +27,10 @@ The code is separated into:
 | Global admin | `admin` | `admin123` |
 | North campus admin | `northadmin` | `north123` |
 | South campus admin | `southadmin` | `south123` |
+| Demo student | `S0001` | `yacine123` |
 | Student | Any student ID, for example `S1001` | Generated or reset by the global admin |
 
-Student passwords are not shared demo passwords. To test a student account, login as `admin`, open the student's profile, use **Reset student password**, and sign in with the temporary password shown by the GUI.
+Most student passwords are generated individually. To test a random student account, login as `admin`, open the student's profile, use **Reset student password**, copy the temporary password from the dialog, and sign in with it. The `S0001` account is included as a stable demo login for quick presentation.
 
 ## How To Build From Source
 
